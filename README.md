@@ -28,7 +28,6 @@ source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
-pip install torchcodec  # Required for audio decoding
 ```
 
 ## Usage
@@ -45,11 +44,25 @@ Run a single inference pass with specific parameters:
 # Run with Dummy dataset (Fast, no large download)
 python run.py --target-model openai/whisper-large-v3 --draft-model openai/whisper-tiny --dataset hf-internal-testing/librispeech_asr_dummy --split validation --max-samples 10
 
-# Run with Full LibriSpeech (Requires ~30GB disk space)
+# Run with Full LibriSpeech (Requires larger disk space)
 python run.py --dataset librispeech_asr --split validation_clean --max-samples 10
 ```
 
-### 2. Web API
+### 2. Python API (Demo)
+
+I have provided a `demo.py` script that demonstrates how to use the `SpeculativeWhisper` class , matching the assignment requirements.
+
+```bash
+python demo.py
+```
+
+This script loads the models and transcribes the sample audio files (`audio1.wav` and `audio2.wav`) included in the repository.
+
+**Output:**
+
+![Demo Output](image.png)
+
+### 3. Web API
 
 Start the FastAPI server for remote transcription. You can set the models via environment variables.
 
@@ -57,16 +70,13 @@ Start the FastAPI server for remote transcription. You can set the models via en
 # Start server (defaults to Large-V3 target, Tiny draft)
 export TARGET_MODEL=openai/whisper-large-v3
 export DRAFT_MODEL=openai/whisper-tiny
-uvicorn fast_whisper.web_api:app --port 8000
+python -m uvicorn fast_whisper.web_api:app --port 8000
 ```
 
 **Test the API:**
 ```bash
-# Create a dummy audio file
-ffmpeg -f lavfi -i "sine=frequency=1000:duration=5" -y test.wav
-
-# Send request
-curl -X POST -F "file=@test.wav" http://127.0.0.1:8000/transcribe
+# Send request (using provided sample audio)
+curl -X POST -F "file=@audio1.wav" http://127.0.0.1:8000/transcribe
 ```
 
 **Response:**
@@ -76,6 +86,10 @@ curl -X POST -F "file=@test.wav" http://127.0.0.1:8000/transcribe
   "duration": 0.5
 }
 ```
+
+**Screenshots:**
+![FastAPI Server Log](fastapi_screenshot_1.png)
+![FastAPI Response](fastapi_screenshot_2.png)
 
 ## Results
 
@@ -97,5 +111,6 @@ I ran a grid search on Google Colab (T4 GPU) to find the optimal `top_p` and `dr
 3. **Speedup: 1.74x** | `top_p=0.2`, `draft_k=8` | WER: 0.1063
 
 The experiment shows that a higher `draft_k` (8) combined with a moderate `top_p` (0.4) yields the best speedup on this dataset.
+
 
 
