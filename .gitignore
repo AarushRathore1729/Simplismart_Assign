@@ -1,0 +1,67 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Packaging / build
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Test / type / lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Environment variables / secrets
+.env
+.env.*
+
+# Logs
+*.log
+
+# App outputs / local runs
+results.json
+*.jsonl
+*.csv
+*.tsv
+*.parquet
+
+# Audio / media artifacts 
+*.wav
+*.mp3
+*.flac
+*.m4a
+*.ogg
+
+# Model checkpoints / weights
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.onnx
+
+# Hugging Face / Datasets caches 
+.cache/
+.huggingface/
+
+
