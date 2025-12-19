@@ -79,7 +79,7 @@ curl -X POST -F "file=@test.wav" http://127.0.0.1:8000/transcribe
 
 ## Results
 
-We compared the performance of Speculative Decoding (Large-V3 + Tiny) vs Baseline (Large-V3 only).
+I compared the performance of Speculative Decoding (Large-V3 + Tiny) vs Baseline (Large-V3 only).
 
 | Environment | Device | Speedup | WER (Baseline) | WER (Speculative) | Notes |
 |------------|--------|---------|----------------|-------------------|-------|
@@ -89,7 +89,7 @@ We compared the performance of Speculative Decoding (Large-V3 + Tiny) vs Baselin
 *Note: Speculative decoding requires a GPU to be effective. On CPU, the overhead of running the draft model sequentially outweighs the verification gains.*
 
 ### Hyperparameter Tuning (Experiment)
-We ran a grid search on Google Colab (T4 GPU) to find the optimal `top_p` and `draft_k` values.
+I ran a grid search on Google Colab (T4 GPU) to find the optimal `top_p` and `draft_k` values.
 
 **Top 3 Configurations:**
 1. **Speedup: 1.76x** | `top_p=0.4`, `draft_k=8` | WER: 0.0945 (Best Speedup)
