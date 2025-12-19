@@ -12,6 +12,7 @@ def parse_args():
     parser.add_argument("--temperature", type=float, default=1.0)
     parser.add_argument("--max-new-tokens", type=int, default=128)
     parser.add_argument("--dataset", default="hf-internal-testing/librispeech_asr_dummy")
+    parser.add_argument("--dataset-config", default="clean", help="Dataset configuration (e.g., 'clean', 'en', or None)")
     parser.add_argument("--split", default="validation")
     parser.add_argument("--max-samples", type=int, default=50)
     parser.add_argument("--experiment", action="store_true", help="Run grid search")
@@ -50,7 +51,7 @@ def main():
     models = load_models(config)
     print(f"Device: {models['device']}")
     
-    dataset = load_dataset(args.dataset, "clean", split=args.split)
+    dataset = load_dataset(args.dataset, args.dataset_config, split=args.split)
     if args.max_samples: dataset = dataset.select(range(min(len(dataset), args.max_samples)))
     print(f"Dataset: {len(dataset)} samples")
     wer_metric = load_metric("wer")
