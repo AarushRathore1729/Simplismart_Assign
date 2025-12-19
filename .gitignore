@@ -36,22 +36,9 @@ Thumbs.db
 .env
 .env.*
 
-# Logs
-*.log
 
-# App outputs / local runs
-results.json
-*.jsonl
-*.csv
-*.tsv
-*.parquet
 
-# Audio / media artifacts 
-*.wav
-*.mp3
-*.flac
-*.m4a
-*.ogg
+
 
 # Model checkpoints / weights
 *.pt
