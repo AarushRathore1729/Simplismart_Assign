@@ -22,8 +22,16 @@ class LogitsProcessor(Protocol):
     def __call__(self, input_ids: torch.Tensor, logits: torch.Tensor) -> torch.Tensor: ...
 
 
+class TokenMapper(Protocol):
+    def __call__(self, token_ids: torch.Tensor) -> torch.Tensor: ...
+
+
 def _identity_processor(_input_ids: torch.Tensor, logits: torch.Tensor) -> torch.Tensor:
     return logits
+
+
+def _identity_mapper(token_ids: torch.Tensor) -> torch.Tensor:
+    return token_ids
 
 
 def _model_forward(
@@ -125,6 +133,9 @@ class SpeculativeGreedyDecoder:
         eos_token_id: int,
         draft_k: int = 4,
         logits_processor: LogitsProcessor | None = None,
+        draft_logits_processor: LogitsProcessor | None = None,
+        target_to_draft: TokenMapper | None = None,
+        draft_to_target: TokenMapper | None = None,
     ) -> None:
         if draft_k < 1:
             raise ValueError("draft_k must be at least 1")
@@ -133,6 +144,9 @@ class SpeculativeGreedyDecoder:
         self.eos_token_id = eos_token_id
         self.draft_k = draft_k
         self.logits_processor = logits_processor or _identity_processor
+        self.draft_logits_processor = draft_logits_processor or self.logits_processor
+        self.target_to_draft = target_to_draft or _identity_mapper
+        self.draft_to_target = draft_to_target or _identity_mapper
 
     @torch.inference_mode()
     def decode(
@@ -158,9 +172,10 @@ class SpeculativeGreedyDecoder:
             proposals = []
 
             for _ in range(proposal_limit):
-                draft_input = tokens if draft_cache is None else tokens[:, -1:]
+                draft_input_target_ids = tokens if draft_cache is None else tokens[:, -1:]
                 if proposals:
-                    draft_input = proposals[-1]
+                    draft_input_target_ids = proposals[-1]
+                draft_input = self.target_to_draft(draft_input_target_ids)
 
                 output = _model_forward(
                     self.draft_model,
@@ -170,9 +185,13 @@ class SpeculativeGreedyDecoder:
                 )
                 draft_calls += 1
                 draft_cache = output.past_key_values
-                draft_context = torch.cat((tokens, *proposals), dim=1) if proposals else tokens
-                logits = self.logits_processor(draft_context, output.logits[:, -1, :])
-                next_token = torch.argmax(logits, dim=-1, keepdim=True)
+                target_context = torch.cat((tokens, *proposals), dim=1) if proposals else tokens
+                draft_context = self.target_to_draft(target_context)
+                logits = self.draft_logits_processor(
+                    draft_context, output.logits[:, -1, :]
+                )
+                draft_token = torch.argmax(logits, dim=-1, keepdim=True)
+                next_token = self.draft_to_target(draft_token)
                 proposals.append(next_token)
                 if int(next_token.item()) == self.eos_token_id:
                     break
@@ -240,7 +259,7 @@ class SpeculativeGreedyDecoder:
             # every committed token except the bonus verifier token.
             draft_extension = _model_forward(
                 self.draft_model,
-                proposed[:, -1:],
+                self.target_to_draft(proposed[:, -1:]),
                 draft_encoder_outputs,
                 draft_cache,
             )

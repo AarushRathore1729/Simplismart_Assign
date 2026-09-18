@@ -8,6 +8,32 @@ for provenance. New development lives under `src/specvoice/`.
 See [SPECVOICE_FOUNDATION.md](SPECVOICE_FOUNDATION.md) for the new implementation,
 correctness boundary, benchmark command and milestone sequence.
 
+## Current SpecVoice CLI
+
+Install the new package and transcribe a short audio file with the shared
+Whisper token policy:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e '.[dev,benchmark]'
+
+specvoice-transcribe audio1.wav \
+  --target-model openai/whisper-large-v3 \
+  --draft-model openai/whisper-tiny \
+  --draft-k 4 \
+  --verify-generate
+```
+
+`--verify-generate` makes the command fail unless the generated token suffix is
+exactly equal to Hugging Face's greedy `generate()` result. The current CLI is
+for short-form audio (up to 30 seconds); streaming segmentation is the next
+milestone.
+
+Large-v3 and Tiny do not use identical vocabulary IDs. SpecVoice constructs a
+token-string-based mapping between them and applies each checkpoint's Whisper
+policy in its native ID space before comparing proposals in the target space.
+
 > The historical 1.76x result below is an assignment-era result and has not yet
 > been reproduced with synchronized timing, exact-token checks, warm-up and a
 > sufficiently large evaluation set. It is not treated as the final project result.
@@ -127,5 +153,3 @@ I ran a grid search on Google Colab (T4 GPU) to find the optimal `top_p` and `dr
 3. **Speedup: 1.74x** | `top_p=0.2`, `draft_k=8` | WER: 0.1063
 
 The experiment shows that a higher `draft_k` (8) combined with a moderate `top_p` (0.4) yields the best speedup on this dataset.
-
-

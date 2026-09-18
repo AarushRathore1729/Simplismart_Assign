@@ -58,7 +58,8 @@ the next ASR milestone.
 
 ## Next milestones
 
-1. Shared Whisper suppression/timestamp policy.
+1. **Implemented on `feat/whisper-integration`:** shared Whisper prompt,
+   suppression and timestamp policy plus an end-to-end short-form audio CLI.
 2. Larger LibriSpeech evaluation with repeated runs and confidence intervals.
 3. Streaming audio buffer, VAD and local-agreement transcription.
 4. FastAPI WebSocket session and browser microphone client.
