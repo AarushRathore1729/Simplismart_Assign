@@ -19,6 +19,7 @@ from typing import Any
 import torch
 
 from .asr.decoder import GreedyDecoder, SpeculativeGreedyDecoder
+from .asr.whisper import build_whisper_policy, validate_whisper_pair
 
 
 def synchronize(device: torch.device) -> None:
@@ -84,21 +85,31 @@ def main() -> None:
         args.draft_model, torch_dtype=dtype, low_cpu_mem_usage=True, use_safetensors=True
     ).to(device).eval()
 
-    if target_model.config.vocab_size != draft_model.config.vocab_size:
-        raise ValueError("Draft and target vocabularies must have the same size")
+    validate_whisper_pair(target_model, draft_model, target_processor, draft_processor)
 
     dataset = load_dataset(args.dataset, args.dataset_config, split=args.split)
     dataset = dataset.select(range(min(args.max_samples, len(dataset))))
-    forced = target_processor.get_decoder_prompt_ids(language=args.language, task=args.task)
-    prefix_ids = [target_model.config.decoder_start_token_id, *[token for _, token in forced]]
-    prefix = torch.tensor([prefix_ids], device=device, dtype=torch.long)
+    policy = build_whisper_policy(
+        target_processor,
+        target_model,
+        language=args.language,
+        task=args.task,
+        return_timestamps=False,
+        device=device,
+    )
+    prefix = policy.prefix_ids
 
-    baseline_decoder = GreedyDecoder(target_model, target_model.config.eos_token_id)
+    baseline_decoder = GreedyDecoder(
+        target_model,
+        target_model.config.eos_token_id,
+        logits_processor=policy.logits_processor,
+    )
     speculative_decoder = SpeculativeGreedyDecoder(
         target_model,
         draft_model,
         target_model.config.eos_token_id,
         draft_k=args.draft_k,
+        logits_processor=policy.logits_processor,
     )
 
     if args.warmup_runs < 0:

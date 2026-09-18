@@ -4,23 +4,23 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "specvoice"
-version = "0.1.0"
+version = "0.2.0"
 description = "Correctness-first speculative decoding and streaming voice-agent research toolkit"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "Aarush Rathore" }]
 dependencies = [
+  "numpy>=1.24",
+  "soundfile>=0.12",
   "torch>=2.2",
+  "transformers>=4.45,<5",
 ]
 
 [project.optional-dependencies]
 benchmark = [
   "datasets>=2.18",
   "jiwer>=3.0",
-  "numpy>=1.24",
-  "soundfile>=0.12",
-  "transformers>=4.45,<5",
 ]
 dev = [
   "pytest>=8.0",
@@ -29,6 +29,7 @@ dev = [
 
 [project.scripts]
 specvoice-benchmark = "specvoice.benchmark:main"
+specvoice-transcribe = "specvoice.transcribe:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -43,4 +44,3 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-
