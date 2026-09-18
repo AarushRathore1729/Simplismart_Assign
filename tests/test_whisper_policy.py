@@ -91,3 +91,18 @@ def test_validates_model_and_tokenizer_compatibility():
             FakeProcessor({"eos": 0, "start": 1, "word": 3}),
             FakeProcessor({"eos": 0, "start": 1, "other": 2}),
         )
+
+
+def test_maps_legacy_nocaptions_to_large_v3_nospeech_token():
+    target = fake_model(vocab_size=4)
+    draft = fake_model(vocab_size=3)
+
+    mapping = validate_whisper_pair(
+        target,
+        draft,
+        FakeProcessor({"eos": 0, "start": 1, "<|nospeech|>": 2, "word": 3}),
+        FakeProcessor({"eos": 0, "start": 1, "<|nocaptions|>": 2}),
+    )
+
+    assert mapping.draft_to_target(torch.tensor([[2]])).tolist() == [[2]]
+    assert mapping.target_to_draft(torch.tensor([[2]])).tolist() == [[2]]
