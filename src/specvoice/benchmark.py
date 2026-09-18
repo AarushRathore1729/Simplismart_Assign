@@ -13,9 +13,12 @@ import platform
 import statistics
 import time
 from dataclasses import asdict
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+import soundfile as sf
 import torch
 
 from .asr.decoder import GreedyDecoder, SpeculativeGreedyDecoder
@@ -65,9 +68,26 @@ def _to_device(inputs: dict[str, torch.Tensor], device: torch.device, dtype: tor
     }
 
 
+def _decode_audio(audio: dict[str, Any]) -> dict[str, Any]:
+    """Decode an HF Audio(decode=False) value without depending on TorchCodec."""
+    audio_bytes = audio.get("bytes")
+    audio_path = audio.get("path")
+    if audio_bytes is None and audio_path is None:
+        raise ValueError("Audio sample has neither bytes nor a path")
+
+    source = BytesIO(audio_bytes) if audio_bytes is not None else audio_path
+    array, sampling_rate = sf.read(source, dtype="float32", always_2d=False)
+    if array.ndim == 2:
+        array = array.mean(axis=1, dtype=np.float32)
+    return {
+        "array": np.asarray(array, dtype=np.float32),
+        "sampling_rate": int(sampling_rate),
+    }
+
+
 def main() -> None:
     # Optional heavyweight imports stay out of unit tests and package import.
-    from datasets import load_dataset
+    from datasets import Audio, load_dataset
     from jiwer import wer
     from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, __version__
 
@@ -91,6 +111,7 @@ def main() -> None:
 
     dataset = load_dataset(args.dataset, args.dataset_config, split=args.split)
     dataset = dataset.select(range(min(args.max_samples, len(dataset))))
+    dataset = dataset.cast_column("audio", Audio(decode=False))
     policy = build_whisper_policy(
         target_processor,
         target_model,
@@ -133,7 +154,7 @@ def main() -> None:
         raise ValueError("repetitions must be at least 1")
 
     if len(dataset) and args.warmup_runs:
-        warmup_audio = dataset[0]["audio"]
+        warmup_audio = _decode_audio(dataset[0]["audio"])
         warmup_target_inputs = _to_device(
             target_processor(
                 warmup_audio["array"],
@@ -172,7 +193,7 @@ def main() -> None:
     references = []
 
     for index, sample in enumerate(dataset):
-        audio = sample["audio"]
+        audio = _decode_audio(sample["audio"])
         target_inputs = _to_device(
             target_processor(
                 audio["array"], sampling_rate=audio["sampling_rate"], return_tensors="pt"
