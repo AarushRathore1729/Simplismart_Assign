@@ -107,3 +107,25 @@ def test_rejects_invalid_configuration_and_batch_size():
     decoder = GreedyDecoder(model, eos_token_id=0)
     with pytest.raises(ValueError, match="batch size 1"):
         decoder.decode(None, torch.tensor([[1], [1]]), 2)
+
+
+def test_supports_distinct_draft_and_target_token_id_spaces():
+    target_transitions = {1: 2, 2: 3, 3: 4, 4: 0, 0: 0}
+    draft_transitions = {6: 7, 7: 8, 8: 9, 9: 5, 5: 5}
+    target_to_draft_table = torch.tensor([5, 6, 7, 8, 9])
+    draft_to_target_table = torch.tensor([-1, -1, -1, -1, -1, 0, 1, 2, 3, 4])
+
+    baseline = GreedyDecoder(ToyModel(target_transitions), eos_token_id=0).decode(
+        None, torch.tensor([[1]]), 8
+    )
+    speculative = SpeculativeGreedyDecoder(
+        ToyModel(target_transitions),
+        ToyModel(draft_transitions),
+        eos_token_id=0,
+        draft_k=3,
+        target_to_draft=lambda ids: target_to_draft_table[ids],
+        draft_to_target=lambda ids: draft_to_target_table[ids],
+    ).decode(None, None, torch.tensor([[1]]), 8)
+
+    assert torch.equal(speculative.token_ids, baseline.token_ids)
+    assert speculative.token_ids.tolist() == [[1, 2, 3, 4, 0]]

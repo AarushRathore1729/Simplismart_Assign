@@ -8,7 +8,8 @@ from specvoice.asr.whisper import build_whisper_policy, validate_whisper_pair
 
 class FakeProcessor:
     def __init__(self, vocab=None):
-        self.tokenizer = SimpleNamespace(get_vocab=lambda: vocab or {"token": 1})
+        default_vocab = {str(index): index for index in range(12)}
+        self.tokenizer = SimpleNamespace(get_vocab=lambda: vocab or default_vocab)
 
     def get_decoder_prompt_ids(self, language, task, no_timestamps):
         assert language == "en"
@@ -71,15 +72,22 @@ def test_rejects_non_contiguous_prompt_positions():
 
 
 def test_validates_model_and_tokenizer_compatibility():
-    target = fake_model()
-    draft = fake_model(vocab_size=13)
-    with pytest.raises(ValueError, match="vocab_size"):
-        validate_whisper_pair(target, draft, FakeProcessor(), FakeProcessor())
+    target = fake_model(vocab_size=4)
+    draft = fake_model(vocab_size=3)
+    mapping = validate_whisper_pair(
+        target,
+        draft,
+        FakeProcessor({"eos": 0, "start": 1, "extra": 2, "word": 3}),
+        FakeProcessor({"eos": 0, "start": 1, "word": 2}),
+    )
+    assert mapping.draft_to_target(torch.tensor([[2]])).tolist() == [[3]]
+    with pytest.raises(ValueError, match="Cannot map"):
+        mapping.target_to_draft(torch.tensor([[2]]))
 
-    with pytest.raises(ValueError, match="tokenizers"):
+    with pytest.raises(ValueError, match="absent"):
         validate_whisper_pair(
             target,
-            fake_model(),
-            FakeProcessor({"a": 1}),
-            FakeProcessor({"a": 2}),
+            draft,
+            FakeProcessor({"eos": 0, "start": 1, "word": 3}),
+            FakeProcessor({"eos": 0, "start": 1, "other": 2}),
         )

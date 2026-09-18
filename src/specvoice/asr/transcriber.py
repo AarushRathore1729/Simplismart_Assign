@@ -119,7 +119,6 @@ class SpeculativeWhisperTranscriber:
         device: torch.device | str | None = None,
         dtype: torch.dtype | None = None,
     ) -> None:
-        validate_whisper_pair(target_model, draft_model, target_processor, draft_processor)
         self.target_model = target_model
         self.draft_model = draft_model
         self.target_processor = target_processor
@@ -129,6 +128,13 @@ class SpeculativeWhisperTranscriber:
         self.return_timestamps = return_timestamps
         self.device = torch.device(device or getattr(target_model, "device", "cpu"))
         self.dtype = dtype or getattr(target_model, "dtype", torch.float32)
+        self.vocabulary_map = validate_whisper_pair(
+            target_model,
+            draft_model,
+            target_processor,
+            draft_processor,
+            device=self.device,
+        )
         self.policy = build_whisper_policy(
             target_processor,
             target_model,
@@ -137,6 +143,17 @@ class SpeculativeWhisperTranscriber:
             return_timestamps=return_timestamps,
             device=self.device,
         )
+        self.draft_policy = build_whisper_policy(
+            draft_processor,
+            draft_model,
+            language=language,
+            task=task,
+            return_timestamps=return_timestamps,
+            device=self.device,
+        )
+        mapped_prefix = self.vocabulary_map.target_to_draft(self.policy.prefix_ids)
+        if not torch.equal(mapped_prefix, self.draft_policy.prefix_ids):
+            raise ValueError("Draft and target Whisper prompts are not semantically equivalent")
         eos_token_id = int(target_model.config.eos_token_id)
         self.baseline_decoder = GreedyDecoder(
             target_model,
@@ -149,6 +166,9 @@ class SpeculativeWhisperTranscriber:
             eos_token_id,
             draft_k=draft_k,
             logits_processor=self.policy.logits_processor,
+            draft_logits_processor=self.draft_policy.logits_processor,
+            target_to_draft=self.vocabulary_map.target_to_draft,
+            draft_to_target=self.vocabulary_map.draft_to_target,
         )
 
     @classmethod

@@ -24,6 +24,39 @@ class WhisperDecodingPolicy:
     return_timestamps: bool
 
 
+@dataclass(frozen=True)
+class WhisperVocabularyMap:
+    """Bidirectional token-ID mapping between compatible Whisper tokenizers."""
+
+    target_to_draft_table: torch.Tensor
+    draft_to_target_table: torch.Tensor
+
+    def target_to_draft(self, token_ids: torch.Tensor) -> torch.Tensor:
+        return self._map(token_ids, self.target_to_draft_table, "target", "draft")
+
+    def draft_to_target(self, token_ids: torch.Tensor) -> torch.Tensor:
+        return self._map(token_ids, self.draft_to_target_table, "draft", "target")
+
+    @staticmethod
+    def _map(
+        token_ids: torch.Tensor,
+        table: torch.Tensor,
+        source_name: str,
+        destination_name: str,
+    ) -> torch.Tensor:
+        if token_ids.numel() == 0:
+            return token_ids.clone()
+        if int(token_ids.min()) < 0 or int(token_ids.max()) >= table.numel():
+            raise ValueError(f"{source_name} token ID is outside the tokenizer vocabulary")
+        mapped = table[token_ids.to(device=table.device, dtype=torch.long)]
+        if bool((mapped < 0).any()):
+            missing = sorted(set(token_ids[mapped.to(token_ids.device) < 0].tolist()))
+            raise ValueError(
+                f"Cannot map {source_name} token IDs {missing} into the {destination_name} vocabulary"
+            )
+        return mapped.to(token_ids.device)
+
+
 def build_whisper_policy(
     processor: Any,
     model: Any,
@@ -103,25 +136,40 @@ def validate_whisper_pair(
     draft_model: Any,
     target_processor: Any,
     draft_processor: Any,
-) -> None:
-    """Reject draft/target pairs that cannot safely share token IDs."""
-
-    fields = ("vocab_size", "decoder_start_token_id", "eos_token_id")
-    for field in fields:
-        target_value = getattr(target_model.config, field, None)
-        draft_value = getattr(draft_model.config, field, None)
-        if target_value != draft_value:
-            raise ValueError(
-                f"Draft and target {field} must match: {draft_value!r} != {target_value!r}"
-            )
+    *,
+    device: torch.device | str | None = None,
+) -> WhisperVocabularyMap:
+    """Build and validate the semantic ID map for a draft/target pair."""
 
     target_tokenizer = getattr(target_processor, "tokenizer", None)
     draft_tokenizer = getattr(draft_processor, "tokenizer", None)
-    if (
-        target_tokenizer is not None
-        and draft_tokenizer is not None
-        and hasattr(target_tokenizer, "get_vocab")
-        and hasattr(draft_tokenizer, "get_vocab")
-        and target_tokenizer.get_vocab() != draft_tokenizer.get_vocab()
-    ):
-        raise ValueError("Draft and target tokenizers must map every token to the same ID")
+    if target_tokenizer is None or draft_tokenizer is None:
+        raise ValueError("Both Whisper processors must expose their tokenizers")
+
+    target_vocab = target_tokenizer.get_vocab()
+    draft_vocab = draft_tokenizer.get_vocab()
+    target_size = int(target_model.config.vocab_size)
+    draft_size = int(draft_model.config.vocab_size)
+    if max(target_vocab.values(), default=-1) >= target_size:
+        raise ValueError("Target tokenizer contains IDs outside the target model vocabulary")
+    if max(draft_vocab.values(), default=-1) >= draft_size:
+        raise ValueError("Draft tokenizer contains IDs outside the draft model vocabulary")
+
+    resolved_device = torch.device(device or getattr(target_model, "device", "cpu"))
+    target_to_draft = torch.full((target_size,), -1, dtype=torch.long, device=resolved_device)
+    draft_to_target = torch.full((draft_size,), -1, dtype=torch.long, device=resolved_device)
+    for token, draft_id in draft_vocab.items():
+        target_id = target_vocab.get(token)
+        if target_id is None:
+            raise ValueError(f"Draft token {token!r} is absent from the target tokenizer")
+        draft_to_target[int(draft_id)] = int(target_id)
+        target_to_draft[int(target_id)] = int(draft_id)
+
+    mapping = WhisperVocabularyMap(target_to_draft, draft_to_target)
+    for field in ("decoder_start_token_id", "eos_token_id"):
+        target_id = int(getattr(target_model.config, field))
+        draft_id = int(getattr(draft_model.config, field))
+        mapped = int(mapping.draft_to_target(torch.tensor([draft_id], device=resolved_device))[0])
+        if mapped != target_id:
+            raise ValueError(f"Draft and target {field} tokens are not semantically equivalent")
+    return mapping

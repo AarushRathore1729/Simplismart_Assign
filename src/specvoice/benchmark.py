@@ -85,7 +85,9 @@ def main() -> None:
         args.draft_model, torch_dtype=dtype, low_cpu_mem_usage=True, use_safetensors=True
     ).to(device).eval()
 
-    validate_whisper_pair(target_model, draft_model, target_processor, draft_processor)
+    vocabulary_map = validate_whisper_pair(
+        target_model, draft_model, target_processor, draft_processor, device=device
+    )
 
     dataset = load_dataset(args.dataset, args.dataset_config, split=args.split)
     dataset = dataset.select(range(min(args.max_samples, len(dataset))))
@@ -97,6 +99,16 @@ def main() -> None:
         return_timestamps=False,
         device=device,
     )
+    draft_policy = build_whisper_policy(
+        draft_processor,
+        draft_model,
+        language=args.language,
+        task=args.task,
+        return_timestamps=False,
+        device=device,
+    )
+    if not torch.equal(vocabulary_map.target_to_draft(policy.prefix_ids), draft_policy.prefix_ids):
+        raise ValueError("Draft and target Whisper prompts are not semantically equivalent")
     prefix = policy.prefix_ids
 
     baseline_decoder = GreedyDecoder(
@@ -110,6 +122,9 @@ def main() -> None:
         target_model.config.eos_token_id,
         draft_k=args.draft_k,
         logits_processor=policy.logits_processor,
+        draft_logits_processor=draft_policy.logits_processor,
+        target_to_draft=vocabulary_map.target_to_draft,
+        draft_to_target=vocabulary_map.draft_to_target,
     )
 
     if args.warmup_runs < 0:
