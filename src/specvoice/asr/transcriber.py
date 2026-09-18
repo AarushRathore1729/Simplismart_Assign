@@ -219,7 +219,12 @@ class SpeculativeWhisperTranscriber:
         )
 
     def _prepare(self, processor: Any, audio: np.ndarray, sampling_rate: int):
-        inputs = processor(audio, sampling_rate=sampling_rate, return_tensors="pt")
+        inputs = processor(
+            audio,
+            sampling_rate=sampling_rate,
+            return_tensors="pt",
+            return_attention_mask=True,
+        )
         return _move_inputs(dict(inputs), self.device, self.dtype)
 
     @torch.inference_mode()
@@ -278,14 +283,17 @@ class SpeculativeWhisperTranscriber:
                 force_unique_generate_call=True,
             )
             reference_tokens = reference.sequences if hasattr(reference, "sequences") else reference
-            generated_tokens = decoded.token_ids[:, self.policy.begin_index :]
+            generated_tokens = decoded.token_ids
             pad_token_id = getattr(self.target_model.generation_config, "pad_token_id", None)
             reference_tokens = _trim_padding(reference_tokens, pad_token_id)
             generated_tokens = _trim_padding(generated_tokens, pad_token_id)
             if not torch.equal(reference_tokens, generated_tokens):
+                reference_values = reference_tokens[0].tolist()
+                generated_values = generated_tokens[0].tolist()
                 raise RuntimeError(
                     "Custom greedy decoding differs from transformers.generate(); "
-                    "refusing to report this transcription as verified"
+                    "refusing to report this transcription as verified. "
+                    f"Reference tokens: {reference_values}; custom tokens: {generated_values}"
                 )
             generate_verified = True
 
