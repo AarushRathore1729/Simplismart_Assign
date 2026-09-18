@@ -19,7 +19,8 @@ class ToyCache:
 
 
 class ToyEncoder:
-    def __call__(self, input_features):
+    def __call__(self, input_features, attention_mask=None):
+        assert attention_mask is not None
         return SimpleNamespace(last_hidden_state=input_features)
 
 
@@ -48,7 +49,8 @@ class ToySpeechModel:
     def generate(self, **kwargs):
         assert kwargs["do_sample"] is False
         assert kwargs["num_beams"] == 1
-        return torch.tensor([[2, 3, 4, 0]], dtype=torch.long)
+        assert "attention_mask" in kwargs
+        return torch.tensor([[1, 2, 3, 4, 0]], dtype=torch.long)
 
     def __call__(
         self,
@@ -77,10 +79,14 @@ class ToyProcessor:
         del language, task, no_timestamps
         return []
 
-    def __call__(self, audio, sampling_rate, return_tensors):
+    def __call__(self, audio, sampling_rate, return_tensors, return_attention_mask):
         assert sampling_rate == 16_000
         assert return_tensors == "pt"
-        return {"input_features": torch.tensor(audio[None, None, :], dtype=torch.float32)}
+        assert return_attention_mask
+        return {
+            "input_features": torch.tensor(audio[None, None, :], dtype=torch.float32),
+            "attention_mask": torch.ones((1, len(audio)), dtype=torch.long),
+        }
 
     def batch_decode(self, token_ids, skip_special_tokens):
         assert skip_special_tokens
