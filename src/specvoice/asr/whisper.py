@@ -13,6 +13,14 @@ from typing import Any
 
 import torch
 
+# OpenAI renamed the no-speech control token when producing the large-v3
+# tokenizer.  The checkpoints use the token for the same semantic event, but
+# matching tokenizer strings literally would incorrectly reject Tiny/Large-v3.
+_SEMANTIC_TOKEN_ALIASES = {
+    "<|nocaptions|>": "<|nospeech|>",
+    "<|nospeech|>": "<|nocaptions|>",
+}
+
 
 @dataclass(frozen=True)
 class WhisperDecodingPolicy:
@@ -160,6 +168,9 @@ def validate_whisper_pair(
     draft_to_target = torch.full((draft_size,), -1, dtype=torch.long, device=resolved_device)
     for token, draft_id in draft_vocab.items():
         target_id = target_vocab.get(token)
+        if target_id is None:
+            alias = _SEMANTIC_TOKEN_ALIASES.get(token)
+            target_id = target_vocab.get(alias) if alias is not None else None
         if target_id is None:
             raise ValueError(f"Draft token {token!r} is absent from the target tokenizer")
         draft_to_target[int(draft_id)] = int(target_id)
