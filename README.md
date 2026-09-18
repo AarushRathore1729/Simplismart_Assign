@@ -1,4 +1,20 @@
-# Fast Whisper Speculative Decoding
+# SpecVoice — foundation in progress
+
+The repository is being evolved from the original Fast Whisper assignment into
+a low-latency streaming voice agent with correctness-tested speculative ASR.
+The old `fast_whisper/` package and published assignment results remain intact
+for provenance. New development lives under `src/specvoice/`.
+
+See [SPECVOICE_FOUNDATION.md](SPECVOICE_FOUNDATION.md) for the new implementation,
+correctness boundary, benchmark command and milestone sequence.
+
+> The historical 1.76x result below is an assignment-era result and has not yet
+> been reproduced with synchronized timing, exact-token checks, warm-up and a
+> sufficiently large evaluation set. It is not treated as the final project result.
+
+---
+
+# Historical prototype: Fast Whisper Speculative Decoding
 
 This project implements speculative decoding for OpenAI's Whisper models to accelerate inference. It uses a small draft model (Whisper Tiny) to propose tokens and a large target model (Whisper Large V3) to verify them.
 
@@ -111,6 +127,5 @@ I ran a grid search on Google Colab (T4 GPU) to find the optimal `top_p` and `dr
 3. **Speedup: 1.74x** | `top_p=0.2`, `draft_k=8` | WER: 0.1063
 
 The experiment shows that a higher `draft_k` (8) combined with a moderate `top_p` (0.4) yields the best speedup on this dataset.
-
 
 
