@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "samples": 10,
+  "repetitions": 3,
+  "modes": [
+    "baseline",
+    "speculative",
+    "optimized",
+    "adaptive"
+  ],
+  "summary_recomputed": true,
+  "token_digest_checks": 0,
+  "exact_match_evidence": "source benchmark gate; original report predates token digests",
+  "source_commit": "90b883aa549051f0996ae92a314441296a8dcae5",
+  "report_sha256": "161524bf6c0aee0ed72c818b5d95c156b7ef5f06591c3e5218cdc4d399374f10"
+}

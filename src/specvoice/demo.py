@@ -48,7 +48,7 @@ def build_demo(engine):
         results_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
         return (
             predictions["baseline"],
-            predictions["adaptive"],
+            predictions["optimized"],
             "**Exact token agreement: passed across all four paths.**\n\n"
             + "\n".join(table)
             + "\n\nOne clip, one measured run per mode after warmup. Use the benchmark for résumé numbers.",
@@ -56,7 +56,7 @@ def build_demo(engine):
             str(results_path),
         )
 
-    with gr.Blocks(title="Fast Whisper — Adaptive Speculative Inference") as demo:
+    with gr.Blocks(title="Fast Whisper — GPU Inference Optimization") as demo:
         gr.Markdown(
             "# Fast Whisper\nCompare target-only inference, cached fixed drafting, buffered drafting and adaptive drafting on the same speech clip."
         )
@@ -66,12 +66,12 @@ def build_demo(engine):
         run = gr.Button("Transcribe and compare", variant="primary")
         with gr.Row():
             baseline = gr.Textbox(label="Target-only transcript", lines=5)
-            adaptive = gr.Textbox(label="Adaptive transcript", lines=5)
+            optimized = gr.Textbox(label="Buffered fixed-draft transcript", lines=5)
         metrics = gr.Markdown()
         with gr.Accordion("Draft lengths, fallback and raw measurements", open=False):
             raw = gr.JSON()
         download = gr.File(label="Download measured result")
-        run.click(compare, [audio, max_tokens], [baseline, adaptive, metrics, raw, download])
+        run.click(compare, [audio, max_tokens], [baseline, optimized, metrics, raw, download])
     return demo
 
 

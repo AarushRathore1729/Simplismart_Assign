@@ -19,12 +19,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--language", default="en")
     parser.add_argument("--task", choices=("transcribe", "translate"), default="transcribe")
     parser.add_argument(
-        "--mode", choices=("baseline", "speculative", "optimized", "adaptive"), default="adaptive"
+        "--mode", choices=("baseline", "speculative", "optimized", "adaptive"), default="optimized"
     )
     parser.add_argument("--draft-k", type=int, default=4)
     parser.add_argument("--max-new-tokens", type=int, default=128)
     parser.add_argument("--max-draft-k", type=int, default=8)
     parser.add_argument("--profile-stages", action="store_true")
+    parser.add_argument("--cached-suppression", action="store_true")
     parser.add_argument("--device", default=None, help="For example: cuda, cuda:0 or cpu")
     parser.add_argument(
         "--dtype", choices=("auto", "float32", "float16", "bfloat16"), default="auto"
@@ -52,6 +53,7 @@ def main() -> None:
         dtype=dtype,
         max_draft_k=args.max_draft_k,
         profile_stages=args.profile_stages,
+        cached_suppression=args.cached_suppression,
     )
     result = transcriber.transcribe_file(
         args.audio,

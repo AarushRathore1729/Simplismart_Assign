@@ -32,6 +32,31 @@ class WhisperDecodingPolicy:
     return_timestamps: bool
 
 
+class CachedWhisperSuppression:
+    """Equivalent short-form token suppression with masks built once.
+
+    The recorded T4 profile showed repeated arange/isin/unique work inside
+    Hugging Face suppression. Reuse a boolean mask instead. This processor
+    supports the no-timestamp policy; timestamp rules use the original adapter.
+    """
+
+    def __init__(self, config: Any, vocab_size: int, begin_index: int, device):
+        self.begin_index = begin_index
+        self.global_mask = torch.zeros(vocab_size, dtype=torch.bool, device=device)
+        self.first_mask = self.global_mask.clone()
+        for token in getattr(config, "suppress_tokens", None) or []:
+            if 0 <= int(token) < vocab_size:
+                self.global_mask[int(token)] = True
+        self.first_mask.copy_(self.global_mask)
+        for token in getattr(config, "begin_suppress_tokens", None) or []:
+            if 0 <= int(token) < vocab_size:
+                self.first_mask[int(token)] = True
+
+    def __call__(self, input_ids: torch.Tensor, logits: torch.Tensor) -> torch.Tensor:
+        mask = self.first_mask if input_ids.shape[-1] == self.begin_index else self.global_mask
+        return logits.masked_fill(mask, -float("inf"))
+
+
 @dataclass(frozen=True)
 class WhisperVocabularyMap:
     """Bidirectional token-ID mapping between compatible Whisper tokenizers."""
@@ -88,6 +113,7 @@ def build_whisper_policy(
     task: str = "transcribe",
     return_timestamps: bool = False,
     device: torch.device | str | None = None,
+    cached_suppression: bool = False,
 ) -> WhisperDecodingPolicy:
     """Build the short-form greedy policy used by Hugging Face Whisper.
 
@@ -124,6 +150,15 @@ def build_whisper_policy(
         prefix.append(int(token_id))
 
     begin_index = len(prefix)
+    if cached_suppression and not return_timestamps:
+        return WhisperDecodingPolicy(
+            prefix_ids=torch.tensor([prefix], dtype=torch.long, device=resolved_device),
+            logits_processor=CachedWhisperSuppression(
+                generation_config, int(model.config.vocab_size), begin_index, resolved_device
+            ),
+            begin_index=begin_index,
+            return_timestamps=False,
+        )
     processors = LogitsProcessorList()
     if return_timestamps:
         if not hasattr(generation_config, "no_timestamps_token_id"):

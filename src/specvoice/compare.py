@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import platform
 import random
@@ -31,6 +32,7 @@ def parse_args(argv=None):
     parser.add_argument("--dataset-config", default="clean")
     parser.add_argument("--split", default="validation")
     parser.add_argument("--max-samples", type=int, default=10)
+    parser.add_argument("--sample-strategy", choices=("first", "evenly-spaced"), default="first")
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--warmup-runs", type=int, default=1)
     parser.add_argument("--max-new-tokens", type=int, default=128)
@@ -48,7 +50,8 @@ def parse_args(argv=None):
     parser.add_argument(
         "--profile", action="store_true", help="Export a separate instrumented trace"
     )
-    parser.add_argument("--profile-mode", choices=("optimized", "adaptive"), default="adaptive")
+    parser.add_argument("--profile-mode", choices=("optimized", "adaptive"), default="optimized")
+    parser.add_argument("--cached-suppression", action="store_true")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output", type=Path, default=Path("results/comparison.json"))
     args = parser.parse_args(argv)
@@ -97,11 +100,20 @@ def load_samples(args):
     from datasets import Audio, load_dataset
 
     dataset = load_dataset(args.dataset, args.dataset_config, split=args.split)
-    dataset = dataset.select(range(min(args.max_samples, len(dataset))))
     dataset = dataset.cast_column("audio", Audio(decode=False))
+    fingerprint = dataset._fingerprint
+    if args.sample_strategy == "first":
+        indices = list(range(min(args.max_samples, len(dataset))))
+    else:
+        indices = evenly_spaced_indices(len(dataset), args.max_samples)
     samples = []
-    for index, row in enumerate(dataset):
+    skipped = []
+    for index in indices:
+        row = dataset[index]
         audio = _decode_audio(row["audio"])
+        if len(audio["array"]) / audio["sampling_rate"] > 30:
+            skipped.append(str(row.get("id", index)))
+            continue
         # Resample once so the quality evaluation has a consistent 16kHz input.
         array = resample_audio(audio["array"], audio["sampling_rate"])
         samples.append(
@@ -112,7 +124,21 @@ def load_samples(args):
                 "reference": row["text"].strip(),
             }
         )
-    return samples, {"source": args.dataset, "fingerprint": dataset._fingerprint}
+    return samples, {
+        "source": args.dataset,
+        "fingerprint": fingerprint,
+        "selection_indices": indices,
+        "skipped_over_30s": skipped,
+    }
+
+
+def evenly_spaced_indices(size: int, limit: int) -> list[int]:
+    """Deterministic wider coverage; no duplicated input indices."""
+    if size < 0 or limit < 1:
+        raise ValueError("size must be nonnegative and limit positive")
+    if size == 0:
+        return []
+    return np.linspace(0, size - 1, min(size, limit), dtype=int).tolist()
 
 
 def measure(engine, sample, mode, max_new_tokens):
@@ -141,6 +167,9 @@ def measure(engine, sample, mode, max_new_tokens):
         "extra_peak_cuda_mib": extra,
         "stats": asdict(result.decode_stats),
         "acceptance_rate": result.decode_stats.acceptance_rate,
+        "token_sha256": hashlib.sha256(
+            np.asarray(result.token_ids, dtype="<i8").tobytes()
+        ).hexdigest(),
         "length_limit_reached": (
             result.decode_stats.generated_tokens == max_new_tokens
             and result.token_ids[-1] != engine.target_model.config.eos_token_id
@@ -342,11 +371,13 @@ def main():
         device=args.device,
         dtype=dtype,
         attn_implementation=args.attention,
+        cached_suppression=args.cached_suppression,
     )
     samples, source = load_samples(args)
     print(f"Device: {engine.device}; samples: {len(samples)}; modes: {args.modes}", flush=True)
     config = {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()}
     config["audio"] = [str(p) for p in args.audio] if args.audio else None
+    config["resolved_dtype"] = str(engine.dtype)
     report = {
         "schema_version": 2,
         "created_at": datetime.now(timezone.utc).isoformat(),

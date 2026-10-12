@@ -123,6 +123,7 @@ class SpeculativeWhisperTranscriber:
         dtype: torch.dtype | None = None,
         max_draft_k: int = 8,
         profile_stages: bool = False,
+        cached_suppression: bool = False,
     ) -> None:
         self.target_model = target_model
         self.draft_model = draft_model
@@ -156,6 +157,24 @@ class SpeculativeWhisperTranscriber:
             return_timestamps=return_timestamps,
             device=self.device,
         )
+        optimized_policy = build_whisper_policy(
+            target_processor,
+            target_model,
+            language=language,
+            task=task,
+            return_timestamps=return_timestamps,
+            device=self.device,
+            cached_suppression=cached_suppression,
+        )
+        optimized_draft_policy = build_whisper_policy(
+            draft_processor,
+            draft_model,
+            language=language,
+            task=task,
+            return_timestamps=return_timestamps,
+            device=self.device,
+            cached_suppression=cached_suppression,
+        )
         mapped_prefix = self.vocabulary_map.target_to_draft(self.policy.prefix_ids)
         if not torch.equal(mapped_prefix, self.draft_policy.prefix_ids):
             raise ValueError("Draft and target Whisper prompts are not semantically equivalent")
@@ -179,8 +198,8 @@ class SpeculativeWhisperTranscriber:
             "draft_k": draft_k,
             "max_draft_k": max(max_draft_k, draft_k),
             "profile_stages": profile_stages,
-            "logits_processor": self.policy.logits_processor,
-            "draft_logits_processor": self.draft_policy.logits_processor,
+            "logits_processor": optimized_policy.logits_processor,
+            "draft_logits_processor": optimized_draft_policy.logits_processor,
             "target_to_draft": self.vocabulary_map.fast_target_to_draft,
             "draft_to_target": self.vocabulary_map.fast_draft_to_target,
         }
@@ -206,6 +225,7 @@ class SpeculativeWhisperTranscriber:
         max_draft_k: int = 8,
         profile_stages: bool = False,
         attn_implementation: str = "sdpa",
+        cached_suppression: bool = False,
     ) -> SpeculativeWhisperTranscriber:
         """Load a compatible target/draft pair from Hugging Face."""
 
@@ -246,6 +266,7 @@ class SpeculativeWhisperTranscriber:
             dtype=resolved_dtype,
             max_draft_k=max_draft_k,
             profile_stages=profile_stages,
+            cached_suppression=cached_suppression,
         )
 
     def _prepare(self, processor: Any, audio: np.ndarray, sampling_rate: int):
@@ -263,7 +284,7 @@ class SpeculativeWhisperTranscriber:
         audio: np.ndarray,
         sampling_rate: int,
         *,
-        mode: DecoderMode = "speculative",
+        mode: DecoderMode = "optimized",
         max_new_tokens: int = 128,
         verify_generate: bool = False,
     ) -> TranscriptionResult:
@@ -373,7 +394,7 @@ class SpeculativeWhisperTranscriber:
         self,
         path: str | Path,
         *,
-        mode: DecoderMode = "speculative",
+        mode: DecoderMode = "optimized",
         max_new_tokens: int = 128,
         verify_generate: bool = False,
     ) -> TranscriptionResult:

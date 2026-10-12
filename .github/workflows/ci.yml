@@ -17,7 +17,7 @@ jobs:
       - name: Install
         run: |
           pip install torch --index-url https://download.pytorch.org/whl/cpu
-          pip install -e '.[dev,benchmark,demo]' 'transformers==4.57.1'
+          pip install -e '.[dev,benchmark,demo,api]' 'transformers==4.57.1'
       - name: Lint
         run: ruff check src tests
       - name: Test

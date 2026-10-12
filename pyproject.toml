@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "specvoice"
-version = "0.2.0"
-description = "Correctness-first speculative decoding and streaming voice-agent research toolkit"
+version = "0.3.0"
+description = "GPU-profiled, correctness-checked Whisper draft-verify inference"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -22,6 +22,7 @@ dependencies = [
 benchmark = [
   "datasets>=2.18",
   "jiwer>=3.0",
+  "matplotlib>=3.6",
 ]
 dev = [
   "pytest>=8.0",
@@ -31,12 +32,19 @@ demo = [
   "gradio>=5.0,<6",
   "httpx[socks]>=0.27,<1",
 ]
+api = [
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.30,<1",
+  "python-multipart>=0.0.12",
+]
 
 [project.scripts]
 specvoice-benchmark = "specvoice.benchmark:main"
 specvoice-transcribe = "specvoice.transcribe:main"
 specvoice-compare = "specvoice.compare:main"
 specvoice-demo = "specvoice.demo:main"
+specvoice-audit = "specvoice.audit:main"
+specvoice-serve = "specvoice.web_api:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

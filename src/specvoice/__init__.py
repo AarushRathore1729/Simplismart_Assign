@@ -1,4 +1,4 @@
-"""SpecVoice: low-latency voice-agent components."""
+"""SpecVoice: Whisper draft-verify inference and GPU benchmarking."""
 
 from .asr.decoder import DecodeResult, DecodeStats, GreedyDecoder, SpeculativeGreedyDecoder
 from .asr.transcriber import SpeculativeWhisperTranscriber, TranscriptionResult
@@ -12,4 +12,4 @@ __all__ = [
     "TranscriptionResult",
 ]
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"

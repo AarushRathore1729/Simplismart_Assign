@@ -29,3 +29,18 @@ by these results. The GPU notebook contains the remaining evaluation steps.
 After a CUDA evaluation, keep the generated comparison JSON, Markdown table
 and trace with the exact model, GPU, dtype, sample count and repetition count.
 Do not reuse the legacy top-p benchmark numbers for this decoder.
+
+## GPU evidence now verified
+
+The provided T4 archive evaluates Large-v3/Tiny on ten unique test utterances,
+three repetitions, with all four paths matching target tokens and no truncation.
+The raw evidence and recomputed audit are in `benchmarks/t4_20261013`.
+Buffered fixed drafting reached 488.3 ms p50 request latency versus 833.2 ms
+for target-only (1.706×); normalized WER is 0.03937 in every path.
+
+The current extension adds cached token-suppression masks, wider deterministic
+sample selection, per-run token digests, a report audit and the REST API.
+84 tests pass. Cached-mask FP16/FP32 scores match Hugging Face, and pretrained
+Tiny audio with the additional generate() oracle check passes on CPU.
+The added mask-caching option has a separate GPU notebook experiment and is
+not included in the recorded 1.71× result.
