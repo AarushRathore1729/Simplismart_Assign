@@ -15,6 +15,7 @@ dependencies = [
   "soundfile>=0.12",
   "torch>=2.2",
   "transformers>=4.45,<5",
+  "accelerate>=0.33,<2",
 ]
 
 [project.optional-dependencies]
@@ -26,10 +27,16 @@ dev = [
   "pytest>=8.0",
   "ruff>=0.6",
 ]
+demo = [
+  "gradio>=5.0,<6",
+  "httpx[socks]>=0.27,<1",
+]
 
 [project.scripts]
 specvoice-benchmark = "specvoice.benchmark:main"
 specvoice-transcribe = "specvoice.transcribe:main"
+specvoice-compare = "specvoice.compare:main"
+specvoice-demo = "specvoice.demo:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

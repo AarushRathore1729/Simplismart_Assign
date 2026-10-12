@@ -51,4 +51,8 @@ Thumbs.db
 .cache/
 .huggingface/
 
+# Generated benchmark evidence (keep selected measured reports deliberately)
+results/
+fast-whisper-results.zip
+
 

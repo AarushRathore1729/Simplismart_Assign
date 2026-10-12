@@ -38,12 +38,27 @@ class WhisperVocabularyMap:
 
     target_to_draft_table: torch.Tensor
     draft_to_target_table: torch.Tensor
+    draft_eos_token_id: int = 0
 
     def target_to_draft(self, token_ids: torch.Tensor) -> torch.Tensor:
         return self._map(token_ids, self.target_to_draft_table, "target", "draft")
 
     def draft_to_target(self, token_ids: torch.Tensor) -> torch.Tensor:
         return self._map(token_ids, self.draft_to_target_table, "draft", "target")
+
+    def fast_target_to_draft(self, token_ids: torch.Tensor) -> torch.Tensor:
+        """Device-only mapping for model-generated IDs after pair validation.
+
+        Target-only control tokens condition the draft using its EOS token.
+        Such proposals still pass through target verification. This fallback
+        never substitutes a token in the committed target output.
+        """
+        mapped = self.target_to_draft_table[token_ids]
+        return torch.where(mapped >= 0, mapped, self.draft_eos_token_id)
+
+    def fast_draft_to_target(self, token_ids: torch.Tensor) -> torch.Tensor:
+        """All draft vocabulary entries were checked by validate_whisper_pair."""
+        return self.draft_to_target_table[token_ids]
 
     @staticmethod
     def _map(
@@ -176,7 +191,12 @@ def validate_whisper_pair(
         draft_to_target[int(draft_id)] = int(target_id)
         target_to_draft[int(target_id)] = int(draft_id)
 
-    mapping = WhisperVocabularyMap(target_to_draft, draft_to_target)
+    if bool((draft_to_target < 0).any()):
+        raise ValueError("Draft model vocabulary contains IDs absent from its tokenizer")
+
+    mapping = WhisperVocabularyMap(
+        target_to_draft, draft_to_target, int(draft_model.config.eos_token_id)
+    )
     for field in ("decoder_start_token_id", "eos_token_id"):
         target_id = int(getattr(target_model.config, field))
         draft_id = int(getattr(draft_model.config, field))

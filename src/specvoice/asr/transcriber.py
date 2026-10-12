@@ -12,9 +12,10 @@ import soundfile as sf
 import torch
 
 from .decoder import DecodeStats, GreedyDecoder, SpeculativeGreedyDecoder
+from .optimized import BufferedSpeculativeDecoder
 from .whisper import build_whisper_policy, validate_whisper_pair
 
-DecoderMode = Literal["baseline", "speculative"]
+DecoderMode = Literal["baseline", "speculative", "optimized", "adaptive"]
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,8 @@ class TranscriptionResult:
     total_seconds: float
     decode_stats: DecodeStats
     generate_verified: bool = False
+    preprocessing_seconds: float = 0.0
+    request_seconds: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -118,6 +121,8 @@ class SpeculativeWhisperTranscriber:
         return_timestamps: bool = False,
         device: torch.device | str | None = None,
         dtype: torch.dtype | None = None,
+        max_draft_k: int = 8,
+        profile_stages: bool = False,
     ) -> None:
         self.target_model = target_model
         self.draft_model = draft_model
@@ -170,6 +175,21 @@ class SpeculativeWhisperTranscriber:
             target_to_draft=self.vocabulary_map.target_to_draft,
             draft_to_target=self.vocabulary_map.draft_to_target,
         )
+        optimized_kwargs = {
+            "draft_k": draft_k,
+            "max_draft_k": max(max_draft_k, draft_k),
+            "profile_stages": profile_stages,
+            "logits_processor": self.policy.logits_processor,
+            "draft_logits_processor": self.draft_policy.logits_processor,
+            "target_to_draft": self.vocabulary_map.fast_target_to_draft,
+            "draft_to_target": self.vocabulary_map.fast_draft_to_target,
+        }
+        self.optimized_decoder = BufferedSpeculativeDecoder(
+            target_model, draft_model, eos_token_id, **optimized_kwargs
+        )
+        self.adaptive_decoder = BufferedSpeculativeDecoder(
+            target_model, draft_model, eos_token_id, adaptive=True, **optimized_kwargs
+        )
 
     @classmethod
     def from_pretrained(
@@ -183,6 +203,9 @@ class SpeculativeWhisperTranscriber:
         return_timestamps: bool = False,
         device: torch.device | str | None = None,
         dtype: torch.dtype | None = None,
+        max_draft_k: int = 8,
+        profile_stages: bool = False,
+        attn_implementation: str = "sdpa",
     ) -> SpeculativeWhisperTranscriber:
         """Load a compatible target/draft pair from Hugging Face."""
 
@@ -196,15 +219,20 @@ class SpeculativeWhisperTranscriber:
             "torch_dtype": resolved_dtype,
             "low_cpu_mem_usage": True,
             "use_safetensors": True,
+            "attn_implementation": attn_implementation,
         }
         target_processor = AutoProcessor.from_pretrained(target_model_name)
         draft_processor = AutoProcessor.from_pretrained(draft_model_name)
-        target_model = AutoModelForSpeechSeq2Seq.from_pretrained(
-            target_model_name, **model_kwargs
-        ).to(resolved_device).eval()
-        draft_model = AutoModelForSpeechSeq2Seq.from_pretrained(
-            draft_model_name, **model_kwargs
-        ).to(resolved_device).eval()
+        target_model = (
+            AutoModelForSpeechSeq2Seq.from_pretrained(target_model_name, **model_kwargs)
+            .to(resolved_device)
+            .eval()
+        )
+        draft_model = (
+            AutoModelForSpeechSeq2Seq.from_pretrained(draft_model_name, **model_kwargs)
+            .to(resolved_device)
+            .eval()
+        )
         return cls(
             target_model,
             draft_model,
@@ -216,6 +244,8 @@ class SpeculativeWhisperTranscriber:
             return_timestamps=return_timestamps,
             device=resolved_device,
             dtype=resolved_dtype,
+            max_draft_k=max_draft_k,
+            profile_stages=profile_stages,
         )
 
     def _prepare(self, processor: Any, audio: np.ndarray, sampling_rate: int):
@@ -239,13 +269,30 @@ class SpeculativeWhisperTranscriber:
     ) -> TranscriptionResult:
         """Transcribe an in-memory waveform of at most 30 seconds."""
 
-        if mode not in ("baseline", "speculative"):
-            raise ValueError("mode must be 'baseline' or 'speculative'")
+        if mode not in ("baseline", "speculative", "optimized", "adaptive"):
+            raise ValueError("Unknown decoder mode")
+        if sampling_rate <= 0:
+            raise ValueError("Sampling rates must be positive")
+        if np.asarray(audio).size / sampling_rate > 30:
+            raise ValueError("This demo supports audio of at most 30 seconds")
+        if not np.isfinite(audio).all():
+            raise ValueError("Audio must contain only finite samples")
+        max_positions = getattr(self.target_model.config, "max_target_positions", 448)
+        if not 1 <= max_new_tokens <= max_positions - self.policy.begin_index:
+            raise ValueError("max_new_tokens exceeds the target decoder context budget")
+        _synchronize(self.device)
+        request_start = perf_counter()
+        preprocess_start = perf_counter()
         waveform = resample_audio(audio, sampling_rate, 16_000)
         target_inputs = self._prepare(self.target_processor, waveform, 16_000)
-        target_encoder, target_encoder_seconds = _timed(
-            self.device, _encode, self.target_model, target_inputs
+        draft_inputs = (
+            self._prepare(self.draft_processor, waveform, 16_000) if mode != "baseline" else None
         )
+        preprocessing_seconds = perf_counter() - preprocess_start
+        with torch.profiler.record_function("specvoice.target_encoder"):
+            target_encoder, target_encoder_seconds = _timed(
+                self.device, _encode, self.target_model, target_inputs
+            )
 
         draft_encoder_seconds = 0.0
         if mode == "baseline":
@@ -257,18 +304,29 @@ class SpeculativeWhisperTranscriber:
                 max_new_tokens,
             )
         else:
-            draft_inputs = self._prepare(self.draft_processor, waveform, 16_000)
-            draft_encoder, draft_encoder_seconds = _timed(
-                self.device, _encode, self.draft_model, draft_inputs
-            )
+            with torch.profiler.record_function("specvoice.draft_encoder"):
+                draft_encoder, draft_encoder_seconds = _timed(
+                    self.device, _encode, self.draft_model, draft_inputs
+                )
+            decoder = {
+                "speculative": self.speculative_decoder,
+                "optimized": self.optimized_decoder,
+                "adaptive": self.adaptive_decoder,
+            }[mode]
             decoded, decoder_seconds = _timed(
                 self.device,
-                self.speculative_decoder.decode,
+                decoder.decode,
                 target_encoder,
                 draft_encoder,
                 self.policy.prefix_ids,
                 max_new_tokens,
             )
+
+        text = self.target_processor.batch_decode(decoded.token_ids, skip_special_tokens=True)[
+            0
+        ].strip()
+        _synchronize(self.device)
+        request_seconds = perf_counter() - request_start
 
         generate_verified = False
         if verify_generate:
@@ -297,9 +355,6 @@ class SpeculativeWhisperTranscriber:
                 )
             generate_verified = True
 
-        text = self.target_processor.batch_decode(
-            decoded.token_ids, skip_special_tokens=True
-        )[0].strip()
         return TranscriptionResult(
             text=text,
             token_ids=tuple(int(token) for token in decoded.token_ids[0].tolist()),
@@ -310,6 +365,8 @@ class SpeculativeWhisperTranscriber:
             total_seconds=target_encoder_seconds + draft_encoder_seconds + decoder_seconds,
             decode_stats=decoded.stats,
             generate_verified=generate_verified,
+            preprocessing_seconds=preprocessing_seconds,
+            request_seconds=request_seconds,
         )
 
     def transcribe_file(

@@ -73,7 +73,9 @@ class ToySpeechModel:
 
 class ToyProcessor:
     def __init__(self):
-        self.tokenizer = SimpleNamespace(get_vocab=lambda: {str(index): index for index in range(16)})
+        self.tokenizer = SimpleNamespace(
+            get_vocab=lambda: {str(index): index for index in range(16)}
+        )
 
     def get_decoder_prompt_ids(self, language, task, no_timestamps):
         del language, task, no_timestamps
@@ -128,3 +130,22 @@ def test_resample_audio_changes_length_and_validates_inputs():
     assert resample_audio(audio, 8_000, 8_000) is audio
     with pytest.raises(ValueError, match="Sampling rates"):
         resample_audio(audio, 0)
+
+
+@pytest.mark.parametrize("mode", ["optimized", "adaptive"])
+def test_optimized_transcriber_matches_target_and_generate(mode):
+    transcriber = make_transcriber()
+    result = transcriber.transcribe_array(
+        np.zeros(800, dtype=np.float32), 16000, mode=mode, verify_generate=True
+    )
+    assert result.token_ids == (1, 2, 3, 4, 0)
+    assert result.generate_verified
+    assert result.request_seconds >= result.total_seconds
+
+
+def test_rejects_long_audio_and_invalid_context_budget():
+    transcriber = make_transcriber()
+    with pytest.raises(ValueError, match="30 seconds"):
+        transcriber.transcribe_array(np.zeros(480001, dtype=np.float32), 16000)
+    with pytest.raises(ValueError, match="context budget"):
+        transcriber.transcribe_array(np.zeros(800, dtype=np.float32), 16000, max_new_tokens=500)
