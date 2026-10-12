@@ -51,4 +51,11 @@ Thumbs.db
 .cache/
 .huggingface/
 
+# Generated benchmark evidence (keep selected measured reports deliberately)
+results/
+fast-whisper-results.zip
 
+
+
+# Local raster previews; the measured SVG is committed
+docs/assets/*.png

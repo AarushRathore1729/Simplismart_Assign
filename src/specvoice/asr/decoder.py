@@ -9,7 +9,7 @@ to both paths in a later milestone.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from time import perf_counter
 from typing import Any, Protocol
 
@@ -57,6 +57,12 @@ class DecodeStats:
     draft_calls: int = 0
     target_calls: int = 0
     elapsed_seconds: float = 0.0
+    verification_blocks: int = 0
+    fallback_tokens: int = 0
+    draft_lengths: tuple[int, ...] = ()
+    control_transfers: int = 0
+    stage_cpu_seconds: dict[str, float] = field(default_factory=dict)
+    stage_cuda_seconds: dict[str, float] = field(default_factory=dict)
 
     @property
     def acceptance_rate(self) -> float:

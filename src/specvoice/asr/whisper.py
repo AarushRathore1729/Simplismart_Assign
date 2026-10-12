@@ -32,18 +32,58 @@ class WhisperDecodingPolicy:
     return_timestamps: bool
 
 
+class CachedWhisperSuppression:
+    """Equivalent short-form token suppression with masks built once.
+
+    The recorded T4 profile showed repeated arange/isin/unique work inside
+    Hugging Face suppression. Reuse a boolean mask instead. This processor
+    supports the no-timestamp policy; timestamp rules use the original adapter.
+    """
+
+    def __init__(self, config: Any, vocab_size: int, begin_index: int, device):
+        self.begin_index = begin_index
+        self.global_mask = torch.zeros(vocab_size, dtype=torch.bool, device=device)
+        self.first_mask = self.global_mask.clone()
+        for token in getattr(config, "suppress_tokens", None) or []:
+            if 0 <= int(token) < vocab_size:
+                self.global_mask[int(token)] = True
+        self.first_mask.copy_(self.global_mask)
+        for token in getattr(config, "begin_suppress_tokens", None) or []:
+            if 0 <= int(token) < vocab_size:
+                self.first_mask[int(token)] = True
+
+    def __call__(self, input_ids: torch.Tensor, logits: torch.Tensor) -> torch.Tensor:
+        mask = self.first_mask if input_ids.shape[-1] == self.begin_index else self.global_mask
+        return logits.masked_fill(mask, -float("inf"))
+
+
 @dataclass(frozen=True)
 class WhisperVocabularyMap:
     """Bidirectional token-ID mapping between compatible Whisper tokenizers."""
 
     target_to_draft_table: torch.Tensor
     draft_to_target_table: torch.Tensor
+    draft_eos_token_id: int = 0
 
     def target_to_draft(self, token_ids: torch.Tensor) -> torch.Tensor:
         return self._map(token_ids, self.target_to_draft_table, "target", "draft")
 
     def draft_to_target(self, token_ids: torch.Tensor) -> torch.Tensor:
         return self._map(token_ids, self.draft_to_target_table, "draft", "target")
+
+    def fast_target_to_draft(self, token_ids: torch.Tensor) -> torch.Tensor:
+        """Device-only mapping for model-generated IDs after pair validation.
+
+        Target-only control tokens condition the draft using its EOS token.
+        Such proposals still pass through target verification. This fallback
+        never substitutes a token in the committed target output.
+        """
+        mapped = self.target_to_draft_table[token_ids]
+        return torch.where(mapped >= 0, mapped, self.draft_eos_token_id)
+
+    def fast_draft_to_target(self, token_ids: torch.Tensor) -> torch.Tensor:
+        """All draft vocabulary entries were checked by validate_whisper_pair."""
+        return self.draft_to_target_table[token_ids]
 
     @staticmethod
     def _map(
@@ -73,6 +113,7 @@ def build_whisper_policy(
     task: str = "transcribe",
     return_timestamps: bool = False,
     device: torch.device | str | None = None,
+    cached_suppression: bool = False,
 ) -> WhisperDecodingPolicy:
     """Build the short-form greedy policy used by Hugging Face Whisper.
 
@@ -109,6 +150,15 @@ def build_whisper_policy(
         prefix.append(int(token_id))
 
     begin_index = len(prefix)
+    if cached_suppression and not return_timestamps:
+        return WhisperDecodingPolicy(
+            prefix_ids=torch.tensor([prefix], dtype=torch.long, device=resolved_device),
+            logits_processor=CachedWhisperSuppression(
+                generation_config, int(model.config.vocab_size), begin_index, resolved_device
+            ),
+            begin_index=begin_index,
+            return_timestamps=False,
+        )
     processors = LogitsProcessorList()
     if return_timestamps:
         if not hasattr(generation_config, "no_timestamps_token_id"):
@@ -176,7 +226,12 @@ def validate_whisper_pair(
         draft_to_target[int(draft_id)] = int(target_id)
         target_to_draft[int(target_id)] = int(draft_id)
 
-    mapping = WhisperVocabularyMap(target_to_draft, draft_to_target)
+    if bool((draft_to_target < 0).any()):
+        raise ValueError("Draft model vocabulary contains IDs absent from its tokenizer")
+
+    mapping = WhisperVocabularyMap(
+        target_to_draft, draft_to_target, int(draft_model.config.eos_token_id)
+    )
     for field in ("decoder_start_token_id", "eos_token_id"):
         target_id = int(getattr(target_model.config, field))
         draft_id = int(getattr(draft_model.config, field))

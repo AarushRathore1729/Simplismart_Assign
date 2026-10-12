@@ -1,0 +1,501 @@
+{
+  "schema_version": 2,
+  "created_at": "2026-10-12T23:29:19.165776+00:00",
+  "environment": {
+    "python": "3.13.15",
+    "torch": "2.11.0+cu130",
+    "transformers": "4.57.1",
+    "device": "cuda",
+    "cuda_runtime": "13.0",
+    "gpu": "Tesla T4",
+    "gpu_capability": [
+      7,
+      5
+    ],
+    "git_commit": "90b883aa549051f0996ae92a314441296a8dcae5",
+    "git_dirty": false
+  },
+  "config": {
+    "target_model": "openai/whisper-large-v3",
+    "draft_model": "openai/whisper-tiny",
+    "audio": [
+      "audio1.wav",
+      "audio2.wav"
+    ],
+    "dataset": "hf-internal-testing/librispeech_asr_dummy",
+    "dataset_config": "clean",
+    "split": "validation",
+    "max_samples": 2,
+    "repetitions": 1,
+    "warmup_runs": 1,
+    "max_new_tokens": 128,
+    "draft_k": 4,
+    "max_draft_k": 8,
+    "modes": [
+      "baseline",
+      "speculative",
+      "optimized",
+      "adaptive"
+    ],
+    "device": null,
+    "dtype": "auto",
+    "attention": "sdpa",
+    "verify_generate": false,
+    "profile": false,
+    "profile_mode": "adaptive",
+    "seed": 42,
+    "output": "results/gpu_smoke.json"
+  },
+  "source": {
+    "source": "local_audio"
+  },
+  "model_revisions": {
+    "target": "06f233fe06e710322aca913c1bc4249a0d71fce1",
+    "draft": "169d4a4341b33bc18d8881c4b69c2e104e1cc0af"
+  },
+  "methodology": {
+    "request_latency": "resampling + feature preparation + encoders + decoding + text conversion; excludes model loading, file I/O and oracle checks",
+    "inference_latency": "target encoder + draft encoder when used + decoder; includes synchronization at stage boundaries",
+    "quantiles": "across per-utterance medians of repeated measurements; descriptive on small samples",
+    "throughput": "serial batch-size-1 replay; generated tokens include EOS; not concurrent serving throughput",
+    "memory": "all paths have both models resident; extra peak is above resident allocated CUDA memory",
+    "quality": "exact tokens vs shared target greedy policy; WER lowercases and removes punctuation",
+    "profiling": "separate instrumented run, excluded from headline benchmark"
+  },
+  "status": "complete",
+  "samples": [
+    {
+      "id": "audio1.wav",
+      "audio_seconds": 11.0,
+      "reference": null,
+      "predictions": {
+        "optimized": "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country.",
+        "speculative": "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country.",
+        "adaptive": "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country.",
+        "baseline": "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country."
+      },
+      "exact_token_match": true,
+      "runs": {
+        "baseline": [
+          {
+            "request_seconds": 0.797067519000052,
+            "inference_seconds": 0.7823110190000762,
+            "preprocessing_seconds": 0.014229490999980499,
+            "target_encoder_seconds": 0.12337415300004295,
+            "draft_encoder_seconds": 0.0,
+            "decoder_seconds": 0.6589368660000332,
+            "resident_cuda_mib": 3028.9736328125,
+            "peak_cuda_mib": 3275.76416015625,
+            "extra_peak_cuda_mib": 246.79052734375,
+            "stats": {
+              "generated_tokens": 26,
+              "draft_tokens": 0,
+              "accepted_draft_tokens": 0,
+              "draft_calls": 0,
+              "target_calls": 26,
+              "elapsed_seconds": 0.6586015180000118,
+              "verification_blocks": 0,
+              "fallback_tokens": 0,
+              "draft_lengths": [],
+              "control_transfers": 0,
+              "stage_cpu_seconds": {},
+              "stage_cuda_seconds": {}
+            },
+            "acceptance_rate": 0.0,
+            "length_limit_reached": false,
+            "repetition": 0,
+            "measurement_order": [
+              "optimized",
+              "speculative",
+              "adaptive",
+              "baseline"
+            ]
+          }
+        ],
+        "speculative": [
+          {
+            "request_seconds": 0.5111239960000376,
+            "inference_seconds": 0.48528614200000675,
+            "preprocessing_seconds": 0.025241490999974303,
+            "target_encoder_seconds": 0.12567904700000554,
+            "draft_encoder_seconds": 0.005125426000006428,
+            "decoder_seconds": 0.3544816689999948,
+            "resident_cuda_mib": 3028.9736328125,
+            "peak_cuda_mib": 3288.42529296875,
+            "extra_peak_cuda_mib": 259.45166015625,
+            "stats": {
+              "generated_tokens": 26,
+              "draft_tokens": 24,
+              "accepted_draft_tokens": 20,
+              "draft_calls": 29,
+              "target_calls": 6,
+              "elapsed_seconds": 0.354129601000011,
+              "verification_blocks": 0,
+              "fallback_tokens": 0,
+              "draft_lengths": [],
+              "control_transfers": 0,
+              "stage_cpu_seconds": {},
+              "stage_cuda_seconds": {}
+            },
+            "acceptance_rate": 0.8333333333333334,
+            "length_limit_reached": false,
+            "repetition": 0,
+            "measurement_order": [
+              "optimized",
+              "speculative",
+              "adaptive",
+              "baseline"
+            ]
+          }
+        ],
+        "optimized": [
+          {
+            "request_seconds": 0.5130167919999735,
+            "inference_seconds": 0.48806924499996285,
+            "preprocessing_seconds": 0.02437754199996789,
+            "target_encoder_seconds": 0.1226193999999623,
+            "draft_encoder_seconds": 0.004682833000003939,
+            "decoder_seconds": 0.3607670119999966,
+            "resident_cuda_mib": 3028.9736328125,
+            "peak_cuda_mib": 3288.4111328125,
+            "extra_peak_cuda_mib": 259.4375,
+            "stats": {
+              "generated_tokens": 26,
+              "draft_tokens": 24,
+              "accepted_draft_tokens": 20,
+              "draft_calls": 24,
+              "target_calls": 6,
+              "elapsed_seconds": 0.36041591400004336,
+              "verification_blocks": 6,
+              "fallback_tokens": 0,
+              "draft_lengths": [
+                4,
+                4,
+                4,
+                4,
+                4,
+                4
+              ],
+              "control_transfers": 6,
+              "stage_cpu_seconds": {},
+              "stage_cuda_seconds": {}
+            },
+            "acceptance_rate": 0.8333333333333334,
+            "length_limit_reached": false,
+            "repetition": 0,
+            "measurement_order": [
+              "optimized",
+              "speculative",
+              "adaptive",
+              "baseline"
+            ]
+          }
+        ],
+        "adaptive": [
+          {
+            "request_seconds": 0.5450623430000405,
+            "inference_seconds": 0.5192914229999701,
+            "preprocessing_seconds": 0.025164910999990298,
+            "target_encoder_seconds": 0.12359965100000636,
+            "draft_encoder_seconds": 0.004785112999968533,
+            "decoder_seconds": 0.3909066589999952,
+            "resident_cuda_mib": 3028.9736328125,
+            "peak_cuda_mib": 3288.4111328125,
+            "extra_peak_cuda_mib": 259.4375,
+            "stats": {
+              "generated_tokens": 26,
+              "draft_tokens": 25,
+              "accepted_draft_tokens": 20,
+              "draft_calls": 25,
+              "target_calls": 7,
+              "elapsed_seconds": 0.39061971000000995,
+              "verification_blocks": 7,
+              "fallback_tokens": 0,
+              "draft_lengths": [
+                4,
+                5,
+                2,
+                2,
+                3,
+                4,
+                5
+              ],
+              "control_transfers": 7,
+              "stage_cpu_seconds": {},
+              "stage_cuda_seconds": {}
+            },
+            "acceptance_rate": 0.8,
+            "length_limit_reached": false,
+            "repetition": 0,
+            "measurement_order": [
+              "optimized",
+              "speculative",
+              "adaptive",
+              "baseline"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "audio2.wav",
+      "audio_seconds": 14.84,
+      "reference": null,
+      "predictions": {
+        "adaptive": "with her white paint and her scarlet smokestack the inverishiel one of the two small steamers that during the summer months plied up and down the loch and incidentally carried on communication between inverishiel and cryonon",
+        "optimized": "with her white paint and her scarlet smokestack the inverishiel one of the two small steamers that during the summer months plied up and down the loch and incidentally carried on communication between inverishiel and cryonon",
+        "baseline": "with her white paint and her scarlet smokestack the inverishiel one of the two small steamers that during the summer months plied up and down the loch and incidentally carried on communication between inverishiel and cryonon",
+        "speculative": "with her white paint and her scarlet smokestack the inverishiel one of the two small steamers that during the summer months plied up and down the loch and incidentally carried on communication between inverishiel and cryonon"
+      },
+      "exact_token_match": true,
+      "runs": {
+        "baseline": [
+          {
+            "request_seconds": 1.4228269309999746,
+            "inference_seconds": 1.408377095999981,
+            "preprocessing_seconds": 0.013838018000001284,
+            "target_encoder_seconds": 0.12518671099996936,
+            "draft_encoder_seconds": 0.0,
+            "decoder_seconds": 1.2831903850000117,
+            "resident_cuda_mib": 3028.9736328125,
+            "peak_cuda_mib": 3279.49072265625,
+            "extra_peak_cuda_mib": 250.51708984375,
+            "stats": {
+              "generated_tokens": 50,
+              "draft_tokens": 0,
+              "accepted_draft_tokens": 0,
+              "draft_calls": 0,
+              "target_calls": 50,
+              "elapsed_seconds": 1.282889302000001,
+              "verification_blocks": 0,
+              "fallback_tokens": 0,
+              "draft_lengths": [],
+              "control_transfers": 0,
+              "stage_cpu_seconds": {},
+              "stage_cuda_seconds": {}
+            },
+            "acceptance_rate": 0.0,
+            "length_limit_reached": false,
+            "repetition": 0,
+            "measurement_order": [
+              "adaptive",
+              "optimized",
+              "baseline",
+              "speculative"
+            ]
+          }
+        ],
+        "speculative": [
+          {
+            "request_seconds": 1.0496267400000079,
+            "inference_seconds": 1.0227348770000049,
+            "preprocessing_seconds": 0.026229004000015266,
+            "target_encoder_seconds": 0.12542607399996086,
+            "draft_encoder_seconds": 0.0047063659999935226,
+            "decoder_seconds": 0.8926024370000505,
+            "resident_cuda_mib": 3028.9736328125,
+            "peak_cuda_mib": 3292.322265625,
+            "extra_peak_cuda_mib": 263.3486328125,
+            "stats": {
+              "generated_tokens": 50,
+              "draft_tokens": 61,
+              "accepted_draft_tokens": 35,
+              "draft_calls": 67,
+              "target_calls": 16,
+              "elapsed_seconds": 0.8922652900000116,
+              "verification_blocks": 0,
+              "fallback_tokens": 0,
+              "draft_lengths": [],
+              "control_transfers": 0,
+              "stage_cpu_seconds": {},
+              "stage_cuda_seconds": {}
+            },
+            "acceptance_rate": 0.5737704918032787,
+            "length_limit_reached": false,
+            "repetition": 0,
+            "measurement_order": [
+              "adaptive",
+              "optimized",
+              "baseline",
+              "speculative"
+            ]
+          }
+        ],
+        "optimized": [
+          {
+            "request_seconds": 1.0989014580000003,
+            "inference_seconds": 1.0717530850000685,
+            "preprocessing_seconds": 0.026485653000008824,
+            "target_encoder_seconds": 0.1254140590000361,
+            "draft_encoder_seconds": 0.0047895700000140096,
+            "decoder_seconds": 0.9415494560000184,
+            "resident_cuda_mib": 3028.9736328125,
+            "peak_cuda_mib": 3292.564453125,
+            "extra_peak_cuda_mib": 263.5908203125,
+            "stats": {
+              "generated_tokens": 50,
+              "draft_tokens": 64,
+              "accepted_draft_tokens": 35,
+              "draft_calls": 64,
+              "target_calls": 16,
+              "elapsed_seconds": 0.941249656000025,
+              "verification_blocks": 16,
+              "fallback_tokens": 0,
+              "draft_lengths": [
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4
+              ],
+              "control_transfers": 16,
+              "stage_cpu_seconds": {},
+              "stage_cuda_seconds": {}
+            },
+            "acceptance_rate": 0.546875,
+            "length_limit_reached": false,
+            "repetition": 0,
+            "measurement_order": [
+              "adaptive",
+              "optimized",
+              "baseline",
+              "speculative"
+            ]
+          }
+        ],
+        "adaptive": [
+          {
+            "request_seconds": 1.4252643299999477,
+            "inference_seconds": 1.3989270839999222,
+            "preprocessing_seconds": 0.02565563100000645,
+            "target_encoder_seconds": 0.09701808099998743,
+            "draft_encoder_seconds": 0.005055462999962401,
+            "decoder_seconds": 1.2968535399999723,
+            "resident_cuda_mib": 3028.9736328125,
+            "peak_cuda_mib": 3291.3173828125,
+            "extra_peak_cuda_mib": 262.34375,
+            "stats": {
+              "generated_tokens": 50,
+              "draft_tokens": 15,
+              "accepted_draft_tokens": 6,
+              "draft_calls": 15,
+              "target_calls": 44,
+              "elapsed_seconds": 1.2965258129999597,
+              "verification_blocks": 8,
+              "fallback_tokens": 36,
+              "draft_lengths": [
+                4,
+                2,
+                2,
+                3,
+                1,
+                1,
+                1,
+                1
+              ],
+              "control_transfers": 44,
+              "stage_cpu_seconds": {},
+              "stage_cuda_seconds": {}
+            },
+            "acceptance_rate": 0.4,
+            "length_limit_reached": false,
+            "repetition": 0,
+            "measurement_order": [
+              "adaptive",
+              "optimized",
+              "baseline",
+              "speculative"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "all_exact_token_matches": true,
+  "sample_count": 2,
+  "summary": {
+    "baseline": {
+      "p50_request_ms": 1109.9472250000133,
+      "p95_request_ms": 1391.5389603999784,
+      "p50_inference_ms": 1095.3440575000286,
+      "p50_decoder_ms": 971.0636255000225,
+      "generated_tokens_per_second": 34.235861979833814,
+      "audio_seconds_per_second": 11.640193073143495,
+      "acceptance_rate": null,
+      "target_calls_per_run": 38,
+      "draft_calls_per_run": 0,
+      "fallback_tokens_total": 0,
+      "truncated_runs": 0,
+      "max_peak_cuda_mib": 3279.49072265625,
+      "max_extra_peak_cuda_mib": 250.51708984375,
+      "normalized_wer": null,
+      "p50_request_speedup": 1.0,
+      "p50_decoder_speedup": 1.0
+    },
+    "speculative": {
+      "p50_request_ms": 780.3753680000227,
+      "p95_request_ms": 1022.7016028000094,
+      "p50_inference_ms": 754.0105095000058,
+      "p50_decoder_ms": 623.5420530000226,
+      "generated_tokens_per_second": 48.69451491964428,
+      "audio_seconds_per_second": 16.556135072679055,
+      "acceptance_rate": 0.6470588235294118,
+      "target_calls_per_run": 11,
+      "draft_calls_per_run": 48,
+      "fallback_tokens_total": 0,
+      "truncated_runs": 0,
+      "max_peak_cuda_mib": 3292.322265625,
+      "max_extra_peak_cuda_mib": 263.3486328125,
+      "normalized_wer": null,
+      "p50_request_speedup": 1.4223247817837081,
+      "p50_decoder_speedup": 1.5573346189370603
+    },
+    "optimized": {
+      "p50_request_ms": 805.9591249999869,
+      "p95_request_ms": 1069.6072246999988,
+      "p50_inference_ms": 779.9111650000157,
+      "p50_decoder_ms": 651.1582340000075,
+      "generated_tokens_per_second": 47.148793060691034,
+      "audio_seconds_per_second": 16.03058964063495,
+      "acceptance_rate": 0.625,
+      "target_calls_per_run": 11,
+      "draft_calls_per_run": 44,
+      "fallback_tokens_total": 0,
+      "truncated_runs": 0,
+      "max_peak_cuda_mib": 3292.564453125,
+      "max_extra_peak_cuda_mib": 263.5908203125,
+      "normalized_wer": null,
+      "p50_request_speedup": 1.3771755794687868,
+      "p50_decoder_speedup": 1.4912867177227636
+    },
+    "adaptive": {
+      "p50_request_ms": 985.1633364999941,
+      "p95_request_ms": 1381.2542306499522,
+      "p50_inference_ms": 959.1092534999461,
+      "p50_decoder_ms": 843.8800994999838,
+      "generated_tokens_per_second": 38.57228399810657,
+      "audio_seconds_per_second": 13.114576559356234,
+      "acceptance_rate": 0.65,
+      "target_calls_per_run": 25.5,
+      "draft_calls_per_run": 20,
+      "fallback_tokens_total": 36,
+      "truncated_runs": 0,
+      "max_peak_cuda_mib": 3291.3173828125,
+      "max_extra_peak_cuda_mib": 262.34375,
+      "normalized_wer": null,
+      "p50_request_speedup": 1.1266631469897581,
+      "p50_decoder_speedup": 1.150712792108023
+    }
+  }
+}

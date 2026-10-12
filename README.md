@@ -1,155 +1,155 @@
-# SpecVoice — foundation in progress
+# Fast Whisper — GPU Inference Optimization
 
-The repository is being evolved from the original Fast Whisper assignment into
-a low-latency streaming voice agent with correctness-tested speculative ASR.
-The old `fast_whisper/` package and published assignment results remain intact
-for provenance. New development lives under `src/specvoice/`.
+Whisper-Tiny drafts tokens and Whisper-Large-v3 verifies a block at a time.
+This project measures the cost of drafting, target verification, cache rollback,
+token processing and host–GPU control in autoregressive speech inference.
 
-See [SPECVOICE_FOUNDATION.md](SPECVOICE_FOUNDATION.md) for the new implementation,
-correctness boundary, benchmark command and milestone sequence.
+**Recorded result: 1.71× p50 request speedup on a Tesla T4**, from 833 to 488 ms,
+with exact target-token agreement and unchanged normalized WER on ten test
+utterances. Fixed drafting was faster than the adaptive heuristic, so buffered
+fixed k=4 is the default.
 
-## Current SpecVoice CLI
+![Recorded T4 benchmark](docs/assets/t4_latency.svg)
 
-Install the new package and transcribe a short audio file with the shared
-Whisper token policy:
+## Recorded benchmark
+
+Large-v3/Tiny, FP16, SDPA, batch size one; the first ten utterances from
+`hf-internal-testing/librispeech_asr_dummy` (`clean`, `validation`), one warmup
+and three repeats. Each mode is timed in randomized order.
+
+| Path | p50 request | p95 request | p50 speedup | Draft acceptance | Normalized WER |
+|---|---:|---:|---:|---:|---:|
+| Target only | 833 ms | 2503 ms | 1.00× | — | 3.94% |
+| Cached fixed k=4 | 494 ms | 1411 ms | 1.69× | 73.4% | 3.94% |
+| Buffered fixed k=4 | 488 ms | 1381 ms | 1.71× | 72.1% | 3.94% |
+| Adaptive k=1–8 | 586 ms | 1724 ms | 1.42× | 68.6% | 3.94% |
+
+All measured token comparisons passed; no output reached the token limit. This
+is a small test-subset result, with descriptive latency quantiles. It does not
+establish performance on full LibriSpeech or concurrent serving.
+
+The buffered path is only 1.2% lower in p50 request latency than the existing
+cached fixed path in this run. The headline 1.71× compares against target-only
+inference. Deferred draft-cache catch-up reduces average draft forward calls
+from 38.8 to 34.4. Adaptive fallback made this workload slower than fixed drafting.
+
+Raw reports, profiler operator statistics, component spans and an audit are
+committed in [benchmarks/t4_20261013](benchmarks/t4_20261013). The recorded source
+is commit `90b883a`. The optional mask-caching optimization added afterward has
+its own notebook evaluation; its performance is not included in this table.
+
+## Quick start
+
+Use a CUDA GPU. The tested T4 has 16 GB VRAM. The notebook preserves the
+runtime's installed CUDA PyTorch and pins the tested Transformers release.
+
+[Open GPU notebook in Colab](https://colab.research.google.com/github/AarushRathore1729/Simplismart_Assign/blob/main/notebooks/gpu_upgrade.ipynb)
+· [Notebook source](notebooks/gpu_upgrade.ipynb) · [Decoder design](docs/design.md)
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e '.[dev,benchmark]'
-
-specvoice-transcribe audio1.wav \
-  --target-model openai/whisper-large-v3 \
-  --draft-model openai/whisper-tiny \
-  --draft-k 4 \
-  --verify-generate
-```
-
-`--verify-generate` makes the command fail unless the generated token suffix is
-exactly equal to Hugging Face's greedy `generate()` result. The current CLI is
-for short-form audio (up to 30 seconds); streaming segmentation is the next
-milestone.
-
-Large-v3 and Tiny do not use identical vocabulary IDs. SpecVoice constructs a
-token-string-based mapping between them and applies each checkpoint's Whisper
-policy in its native ID space before comparing proposals in the target space.
-
-> The historical 1.76x result below is an assignment-era result and has not yet
-> been reproduced with synchronized timing, exact-token checks, warm-up and a
-> sufficiently large evaluation set. It is not treated as the final project result.
-
----
-
-# Historical prototype: Fast Whisper Speculative Decoding
-
-This project implements speculative decoding for OpenAI's Whisper models to accelerate inference. It uses a small draft model (Whisper Tiny) to propose tokens and a large target model (Whisper Large V3) to verify them.
-
-## Functionality
-
-- **Speculative Decoding**: Uses a draft-verify mechanism where a small model generates candidate tokens that are verified in parallel by the large model.
-- **Greedy & Nucleus Sampling**: Supports both greedy decoding and top-p (nucleus) sampling.
-- **KV Caching**: Optimized with Key-Value caching for both draft and target models.
-- **Benchmarking**: Tools to compare baseline vs. speculative performance (WER and Speedup).
-- **Web API**: FastAPI server for remote transcription.
-
-## Installation
-
-### Prerequisites
-- Python 3.8+
-- `ffmpeg` installed on your system.
-
-### Setup
-```bash
-# Clone the repository
-git clone https://github.com/AarushRathore1729/Simplismart_Assign.git
+git clone --branch feat/whisper-adaptive-profile --single-branch   https://github.com/AarushRathore1729/Simplismart_Assign.git
 cd Simplismart_Assign
-
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
+python -m pip install -e '.[dev,benchmark,demo,api]' 'transformers==4.57.1'
+python -m pytest
 ```
 
-## Usage
-
-### 1. Run Benchmark (Local or Colab)
-
-**Google Colab:**
-Use the provided notebook `colab_runner.ipynb` to run the benchmark on a free T4 GPU. This avoids large downloads and disk usage issues by using a dummy dataset.
-
-**Local Run:**
-Run a single inference pass with specific parameters:
+First run a two-clip smoke check:
 
 ```bash
-# Run with Dummy dataset (Fast, no large download)
-python run.py --target-model openai/whisper-large-v3 --draft-model openai/whisper-tiny --dataset hf-internal-testing/librispeech_asr_dummy --split validation --max-samples 10
-
-# Run with Full LibriSpeech (Requires larger disk space)
-python run.py --dataset librispeech_asr --split validation_clean --max-samples 10
+specvoice-compare --audio audio1.wav audio2.wav --max-samples 2   --repetitions 1 --warmup-runs 1 --output results/gpu_smoke.json
 ```
 
-### 2. Python API (Demo)
-
-I have provided a `demo.py` script that demonstrates how to use the `SpeculativeWhisper` class , matching the assignment requirements.
+Reproduce the recorded workload and audit the result:
 
 ```bash
-python demo.py
+specvoice-compare --max-samples 10 --repetitions 3 --warmup-runs 1   --max-new-tokens 128 --profile --output results/comparison.json
+specvoice-audit results/comparison.json --output results/comparison.audit.json
 ```
 
-This script loads the models and transcribes the sample audio files (`audio1.wav` and `audio2.wav`) included in the repository.
-
-**Output:**
-
-![Demo Output](image.png)
-
-### 3. Web API
-
-Start the FastAPI server for remote transcription. You can set the models via environment variables.
+## Demo and REST API
 
 ```bash
-# Start server (defaults to Large-V3 target, Tiny draft)
-export TARGET_MODEL=openai/whisper-large-v3
-export DRAFT_MODEL=openai/whisper-tiny
-python -m uvicorn fast_whisper.web_api:app --port 8000
+specvoice-demo --port 7860
+specvoice-serve --port 8000
 ```
 
-**Test the API:**
+Launch the desired interface. The demo accepts an English audio upload, displays
+matching target/fixed-draft transcripts, compares all four paths and exports the
+measured result. Open forwarded port 7860 in Lightning AI; the notebook also
+supports an inline Gradio demo. `--share` explicitly enables a temporary public
+Gradio link. See the [one-minute demo guide](docs/demo.md).
+
+The REST API loads one engine and provides `POST /transcribe`, `GET /health`
+and `/docs`, with JSON text, tokens and component timings.
+
 ```bash
-# Send request (using provided sample audio)
-curl -X POST -F "file=@audio1.wav" http://127.0.0.1:8000/transcribe
+curl -X POST 'http://127.0.0.1:8000/transcribe?mode=optimized&max_new_tokens=128'   -F 'file=@audio1.wav'
 ```
 
-**Response:**
-```json
-{
-  "text": ["...transcribed text..."],
-  "duration": 0.5
-}
+## Implementations
+
+| Mode | What it does |
+|---|---|
+| `baseline` | Target-only greedy decoding with persistent KV state |
+| `speculative` | Existing cached fixed-k draft/verify decoder |
+| `optimized` | Preallocated token workspaces, device-side ID mapping and deferred draft-cache catch-up |
+| `adaptive` | Buffered decoder with acceptance-based k adjustment and target-only fallback |
+
+Rejection commits the accepted prefix plus the target correction and crops only
+self-attention KV state. Fully accepted blocks consume the two uncached draft
+inputs together on the next iteration. Draft proposals stay on device; one small
+acceptance/EOS packet is transferred per verification block. Transformers still
+manages dynamic KV allocations. Implementation: Python, PyTorch SDPA/CUDA,
+PyTorch Profiler and NVTX.
+
+## Profile-guided follow-up
+
+The uploaded T4 trace exposed repeated `arange`/`isin`/`unique` work in token
+suppression. `--cached-suppression` builds boolean masks once, preserving the
+shared target policy. FP16/FP32 score-equivalence tests and a pretrained CPU
+oracle check pass. The GPU notebook includes this separate wider evaluation:
+
+```bash
+specvoice-compare --modes baseline optimized --max-samples 30   --sample-strategy evenly-spaced --repetitions 3 --max-new-tokens 256   --cached-suppression --verify-generate --profile --output results/expanded.json
+specvoice-audit results/expanded.json --output results/expanded.audit.json
 ```
 
-**Screenshots:**
-![FastAPI Server Log](fastapi_screenshot_1.png)
-![FastAPI Response](fastapi_screenshot_2.png)
+Selected clips above 30 seconds are recorded and skipped. Report the actual
+completed sample count. If any output is truncated, use a larger permitted token
+budget before reporting WER. The target greedy oracle continues using the
+original Hugging Face suppression processors.
 
-## Results
+## Measurement and validation
 
-I compared the performance of Speculative Decoding (Large-V3 + Tiny) vs Baseline (Large-V3 only).
+- Request latency includes resampling, feature preparation, required encoders,
+  decoding and text conversion. It excludes model loading, file I/O and oracle checks.
+- Component encoder/decoder times are synchronized CUDA measurements. Serial
+  throughput and peak allocated CUDA memory are recorded separately.
+- Both models are resident in every path; memory is not a target-only deployment
+  comparison. CUDA stream spans can include host launch gaps.
+- Profiling runs separately and exports `.trace.json`, `.profile.txt` and
+  `.stages.json`, with ranges for draft, verification, control, cache and fallback.
+- Every measured run requires exact tokens against the target decoder. New
+  reports include per-run token digests and recomputable summary metrics.
+- 84 tests cover cache-sensitive rejection, EOS, budget limits, actual Transformers
+  cache objects, suppression equivalence, uploaded audio, REST responses and audit failures.
 
-| Environment | Device | Speedup | WER (Baseline) | WER (Speculative) | Notes |
-|------------|--------|---------|----------------|-------------------|-------|
-| **Google Colab** | T4 GPU | **1.76x** | 0.0945 | 0.0945 | Best config: `top_p=0.4`, `draft_k=8`. |
-| **Local Machine** | CPU | 0.61x | 0.0861 | 0.0861 | Slower due to CPU overhead and serial execution. |
+An additional `--verify-generate` check compares the target path with Hugging Face
+`generate()` outside timing. A numerical token mismatch stops publication of
+speedup evidence and saves the discrepancy. [Validation record](docs/validation.md).
 
-*Note: Speculative decoding requires a GPU to be effective. On CPU, the overhead of running the draft model sequentially outweighs the verification gains.*
+Scope: greedy English transcription, batch size one, audio up to 30 seconds.
 
-### Hyperparameter Tuning (Experiment)
-I ran a grid search on Google Colab (T4 GPU) to find the optimal `top_p` and `draft_k` values.
+## Repository map
 
-**Top 3 Configurations:**
-1. **Speedup: 1.76x** | `top_p=0.4`, `draft_k=8` | WER: 0.0945 (Best Speedup)
-2. **Speedup: 1.75x** | `top_p=0.2`, `draft_k=6` | WER: 0.0945 (Best WER tie)
-3. **Speedup: 1.74x** | `top_p=0.2`, `draft_k=8` | WER: 0.1063
+- `src/specvoice/asr/`: decoders, cache rollback, Whisper policy and transcription.
+- `src/specvoice/compare.py`, `audit.py`: measured comparison and result verification.
+- `src/specvoice/demo.py`, `web_api.py`: upload demonstration and REST interface.
+- `notebooks/gpu_upgrade.ipynb`: Colab/Lightning execution and evidence export.
+- `benchmarks/`: committed measured evidence with source and hardware provenance.
+- `scripts/render_benchmark.py`: reproducible SVG/PNG benchmark figure.
+- `tests/`: offline correctness, API and benchmark validation.
 
-The experiment shows that a higher `draft_k` (8) combined with a moderate `top_p` (0.4) yields the best speedup on this dataset.
+The original assignment remains under `fast_whisper/`; its [historical README](docs/legacy_assignment.md)
+and sampling results are a separate implementation. Use the `specvoice-*` commands
+for the verified greedy inference project.
