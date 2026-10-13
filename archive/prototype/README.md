@@ -27,8 +27,8 @@ This project implements speculative decoding for OpenAI's Whisper models to acce
 ### Setup
 ```bash
 # Clone the repository
-git clone https://github.com/AarushRathore1729/Simplismart_Assign.git
-cd Simplismart_Assign/archive/prototype
+git clone https://github.com/AarushRathore1729/fast-whisper.git
+cd fast-whisper/archive/prototype
 
 # Create virtual environment
 python -m venv .venv

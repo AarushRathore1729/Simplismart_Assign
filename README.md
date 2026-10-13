@@ -11,7 +11,7 @@ additional untimed Hugging Face `generate()` oracle check. Buffered fixed k=4
 with cached suppression masks is the default.
 
 [Live benchmark showcase](https://fast-whisper-aarush.socialhill32.chatgpt.site)
-· [Run audio inference in Colab](https://colab.research.google.com/github/AarushRathore1729/Simplismart_Assign/blob/main/notebooks/gpu_upgrade.ipynb)
+· [Run audio inference in Colab](https://colab.research.google.com/github/AarushRathore1729/fast-whisper/blob/main/notebooks/gpu_upgrade.ipynb)
 
 The public showcase includes all 30 clip-level results, transcript comparisons,
 raw report downloads and an illustrative draft–verify walkthrough. Live audio
@@ -50,12 +50,12 @@ numbers are not a controlled mask-caching ablation.
 Use a CUDA GPU. The tested T4 has 16 GB VRAM. The notebook preserves the
 runtime's installed CUDA PyTorch and pins the tested Transformers release.
 
-[Open GPU notebook in Colab](https://colab.research.google.com/github/AarushRathore1729/Simplismart_Assign/blob/main/notebooks/gpu_upgrade.ipynb)
+[Open GPU notebook in Colab](https://colab.research.google.com/github/AarushRathore1729/fast-whisper/blob/main/notebooks/gpu_upgrade.ipynb)
 · [Notebook source](notebooks/gpu_upgrade.ipynb) · [Decoder design](docs/design.md)
 
 ```bash
-git clone --branch main --single-branch https://github.com/AarushRathore1729/Simplismart_Assign.git
-cd Simplismart_Assign
+git clone --branch main --single-branch https://github.com/AarushRathore1729/fast-whisper.git
+cd fast-whisper
 python -m pip install -e '.[dev,benchmark,demo,api]' 'transformers==4.57.1'
 python -m pytest
 ```

@@ -17,7 +17,7 @@
   <a class="skip" href="#results">Skip to benchmarks</a>
   <header class="nav wrap">
     <a class="brand" href="#"><span class="brand-icon" aria-hidden="true">▥</span> FAST WHISPER</a>
-    <nav aria-label="Main navigation"><a href="#results">Results</a><a href="#decoding">How it works</a><a class="nav-git" href="https://github.com/AarushRathore1729/Simplismart_Assign" target="_blank" rel="noopener">GitHub ↗</a></nav>
+    <nav aria-label="Main navigation"><a href="#results">Results</a><a href="#decoding">How it works</a><a class="nav-git" href="https://github.com/AarushRathore1729/fast-whisper" target="_blank" rel="noopener">GitHub ↗</a></nav>
   </header>
   <main>
     <section class="hero wrap">
@@ -25,7 +25,7 @@
         <p class="eyebrow"><span class="status-dot"></span> GPU INFERENCE OPTIMIZATION · BY AARUSH RATHORE</p>
         <h1>Let Tiny draft.<br>Let Large <em>verify.</em></h1>
         <p class="intro">Accelerating Whisper-Large-v3 with speculative greedy decoding. Fewer target-model calls, with the same verified output tokens.</p>
-        <div class="actions"><a class="button primary" href="#results">Explore the benchmarks <span>↓</span></a><a class="button secondary" href="https://colab.research.google.com/github/AarushRathore1729/Simplismart_Assign/blob/main/notebooks/gpu_upgrade.ipynb" target="_blank" rel="noopener">Run the GPU demo ↗</a></div>
+        <div class="actions"><a class="button primary" href="#results">Explore the benchmarks <span>↓</span></a><a class="button secondary" href="https://colab.research.google.com/github/AarushRathore1729/fast-whisper/blob/main/notebooks/gpu_upgrade.ipynb" target="_blank" rel="noopener">Run the GPU demo ↗</a></div>
         <p class="hero-note">Recorded on NVIDIA T4 · FP16 · fixed draft length k = 4</p>
       </div>
       <div class="hero-chart" aria-label="Median request latency comparison">
@@ -72,9 +72,9 @@
 
     <section class="section wrap profile-section"><div><p class="eyebrow">04 / ONE CLIP UNDER THE PROFILER</p><h2>Less repeated launch work.</h2><p>On the same 23-token clip, cached masks reduced CUDA runtime <code>cudaLaunchKernel</code> calls from 8,427 to 6,578, with identical output tokens.</p><p class="small">21.9% fewer runtime API calls in separate instrumented runs. Driver <code>cuLaunchKernel</code> calls stayed at 1,354. These traces are separate from the unprofiled latency benchmark.</p><a class="text-link" href="profile.json" download>Download profile counters ↓</a></div><div class="profile-counters"><div><strong>90 → 0</strong><span>Repeated <code>aten::isin</code> operations</span></div><div><strong>21.9%</strong><span>Fewer CUDA runtime launch calls</span></div></div></section>
 
-    <section id="demo" class="demo-section"><div class="wrap demo-layout"><div><p class="eyebrow">05 / RUN IT YOURSELF</p><h2>Your audio. Real GPU inference.</h2><p>The Gradio interface compares four decoding paths, shows transcripts and timings, and exports the measured result. FastAPI exposes an audio-upload endpoint.</p><p class="small">This showcase runs without a GPU. Live transcription runs in your Colab or Lightning GPU session. In notebook Section 3, set <code>SHARE = True</code> to launch a temporary public Gradio demo.</p></div><div class="demo-actions"><a class="button primary" href="https://colab.research.google.com/github/AarushRathore1729/Simplismart_Assign/blob/main/notebooks/gpu_upgrade.ipynb" target="_blank" rel="noopener">Open GPU demo in Colab ↗</a><a class="button secondary" href="https://github.com/AarushRathore1729/Simplismart_Assign/blob/main/docs/demo.md" target="_blank" rel="noopener">Read the demo guide ↗</a><div class="terminal"><span class="mono">LOCAL GPU</span><code>specvoice-demo --share</code><code>specvoice-serve --port 8000</code></div></div></div></section>
+    <section id="demo" class="demo-section"><div class="wrap demo-layout"><div><p class="eyebrow">05 / RUN IT YOURSELF</p><h2>Your audio. Real GPU inference.</h2><p>The Gradio interface compares four decoding paths, shows transcripts and timings, and exports the measured result. FastAPI exposes an audio-upload endpoint.</p><p class="small">This showcase runs without a GPU. Live transcription runs in your Colab or Lightning GPU session. In notebook Section 3, set <code>SHARE = True</code> to launch a temporary public Gradio demo.</p></div><div class="demo-actions"><a class="button primary" href="https://colab.research.google.com/github/AarushRathore1729/fast-whisper/blob/main/notebooks/gpu_upgrade.ipynb" target="_blank" rel="noopener">Open GPU demo in Colab ↗</a><a class="button secondary" href="https://github.com/AarushRathore1729/fast-whisper/blob/main/docs/demo.md" target="_blank" rel="noopener">Read the demo guide ↗</a><div class="terminal"><span class="mono">LOCAL GPU</span><code>specvoice-demo --share</code><code>specvoice-serve --port 8000</code></div></div></div></section>
   </main>
-  <footer class="wrap"><div><b>Fast Whisper</b><span>Built by Aarush Rathore · Python / PyTorch / CUDA profiling / FastAPI</span></div><a href="https://github.com/AarushRathore1729/Simplismart_Assign" target="_blank" rel="noopener">Source, tests & evidence ↗</a><p>Recorded evaluation: 13 October 2026 · source <code>1bed58a</code> · measurements preserved in the repository.</p></footer>
+  <footer class="wrap"><div><b>Fast Whisper</b><span>Built by Aarush Rathore · Python / PyTorch / CUDA profiling / FastAPI</span></div><a href="https://github.com/AarushRathore1729/fast-whisper" target="_blank" rel="noopener">Source, tests & evidence ↗</a><p>Recorded evaluation: 13 October 2026 · source <code>1bed58a</code> · measurements preserved in the repository.</p></footer>
   <div class="load-error" id="load-error" hidden>Recorded data could not be loaded. <a href="benchmark.json">Open the raw benchmark</a>.</div>
 </body>
 </html>
