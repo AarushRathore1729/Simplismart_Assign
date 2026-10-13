@@ -51,7 +51,12 @@ def parse_args(argv=None):
         "--profile", action="store_true", help="Export a separate instrumented trace"
     )
     parser.add_argument("--profile-mode", choices=("optimized", "adaptive"), default="optimized")
-    parser.add_argument("--cached-suppression", action="store_true")
+    parser.add_argument(
+        "--cached-suppression",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Cache suppression masks for buffered paths; disable for an uncached ablation",
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output", type=Path, default=Path("results/comparison.json"))
     args = parser.parse_args(argv)

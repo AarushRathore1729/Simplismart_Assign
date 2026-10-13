@@ -24,10 +24,12 @@ def main():
         "optimized": "Buffered fixed k=4",
         "adaptive": "Adaptive k=1–8",
     }
+    if report["config"].get("cached_suppression"):
+        labels["optimized"] = "Buffered k=4 + cached masks"
     values = [report["summary"][m]["p50_request_ms"] for m in modes]
     speeds = [report["summary"][m]["p50_request_speedup"] for m in modes]
     plt.rcParams.update({"font.family": "DejaVu Sans", "svg.hashsalt": "specvoice"})
-    fig, ax = plt.subplots(figsize=(10.5, 5.4))
+    fig, ax = plt.subplots(figsize=(10.5, 5.4 if len(modes) > 2 else 4.4))
     fig.patch.set_facecolor("#ffffff")
     colors = {
         "baseline": "#596477",
@@ -60,14 +62,16 @@ def main():
     fig.text(
         0.03,
         0.875,
-        "Whisper-Large-v3 + Tiny · FP16 · 10 test utterances × 3 repeats",
+        f"Whisper-Large-v3 + Tiny · FP16 · {report['sample_count']} test utterances "
+        f"× {report['config']['repetitions']} repeats",
         color="#526174",
         fontsize=11,
     )
     fig.text(
         0.03,
         0.055,
-        "Exact target-token agreement in every measured comparison. Normalized WER: 3.94% for all paths.",
+        "Exact target-token agreement in every measured comparison. Normalized WER: "
+        f"{100 * report['summary']['baseline']['normalized_wer']:.2f}% for all paths.",
         fontsize=10,
         color="#344357",
     )
@@ -78,9 +82,11 @@ def main():
         fontsize=8.5,
         color="#5a6879",
     )
-    fig.subplots_adjust(left=0.23, right=0.98, top=0.79, bottom=0.20)
+    fig.subplots_adjust(left=0.32 if len(modes) <= 2 else 0.23, right=0.98, top=0.79, bottom=0.22)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(args.output.with_suffix(".svg"), metadata={"Date": None})
+    svg_path = args.output.with_suffix(".svg")
+    fig.savefig(svg_path, metadata={"Date": None})
+    svg_path.write_text("\n".join(line.rstrip() for line in svg_path.read_text().splitlines()) + "\n")
     fig.savefig(args.output.with_suffix(".png"), dpi=180)
     print(args.output.with_suffix(".svg"))
 

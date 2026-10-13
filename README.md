@@ -1,42 +1,42 @@
 # Fast Whisper — GPU Inference Optimization
 
 Whisper-Tiny drafts tokens and Whisper-Large-v3 verifies a block at a time.
-This project measures the cost of drafting, target verification, cache rollback,
-token processing and host–GPU control in autoregressive speech inference.
+This project measures drafting, target verification, cache rollback, token
+processing and host–GPU control in autoregressive speech inference.
 
-**Recorded result: 1.71× p50 request speedup on a Tesla T4**, from 833 to 488 ms,
-with exact target-token agreement and unchanged normalized WER on ten test
-utterances. Fixed drafting was faster than the adaptive heuristic, so buffered
-fixed k=4 is the default.
+**Final validated result: 1.60× p50 request speedup and 2.00× decoder speedup on a
+Tesla T4**, with exact target-token agreement and unchanged normalized WER.
+The final evaluation covers 30 test utterances and three repeats, with an
+additional untimed Hugging Face `generate()` oracle check. Buffered fixed k=4
+with cached suppression masks is the default.
 
-![Recorded T4 benchmark](docs/assets/t4_latency.svg)
+![Final recorded T4 benchmark](docs/assets/t4_latency.svg)
 
-## Recorded benchmark
+## Final benchmark
 
-Large-v3/Tiny, FP16, SDPA, batch size one; the first ten utterances from
+Large-v3/Tiny, FP16, SDPA, batch size one; 30 evenly spaced utterances from
 `hf-internal-testing/librispeech_asr_dummy` (`clean`, `validation`), one warmup
-and three repeats. Each mode is timed in randomized order.
+and three repeats. Measurement order is randomized.
 
-| Path | p50 request | p95 request | p50 speedup | Draft acceptance | Normalized WER |
+| Path | p50 request | p95 request | Request speedup | Draft acceptance | Normalized WER |
 |---|---:|---:|---:|---:|---:|
-| Target only | 833 ms | 2503 ms | 1.00× | — | 3.94% |
-| Cached fixed k=4 | 494 ms | 1411 ms | 1.69× | 73.4% | 3.94% |
-| Buffered fixed k=4 | 488 ms | 1381 ms | 1.71× | 72.1% | 3.94% |
-| Adaptive k=1–8 | 586 ms | 1724 ms | 1.42× | 68.6% | 3.94% |
+| Target-only cached greedy | 820 ms | 1794 ms | 1.00× | — | 3.22% |
+| Buffered k=4 + cached masks | 512 ms | 1047 ms | 1.60× | 67.8% | 3.22% |
 
-All measured token comparisons passed; no output reached the token limit. This
-is a small test-subset result, with descriptive latency quantiles. It does not
-establish performance on full LibriSpeech or concurrent serving.
+Decoder p50 fell from **656 to 328 ms**. All **90 optimized-vs-target token-digest
+comparisons** passed; the independent Hugging Face oracle also passed on all 30
+utterances. No outputs were truncated. Both paths achieved the same 3.22%
+normalized WER.
 
-The buffered path is only 1.2% lower in p50 request latency than the existing
-cached fixed path in this run. The headline 1.71× compares against target-only
-inference. Deferred draft-cache catch-up reduces average draft forward calls
-from 38.8 to 34.4. Adaptive fallback made this workload slower than fixed drafting.
+This is a small, single-speaker test subset spanning three chapters. Quantiles
+are descriptive across per-utterance repetition medians. Serial throughput is
+not a concurrent-serving result, and the target-only timing baseline is the
+project's cached greedy loop; `generate()` is an untimed correctness oracle.
 
-Raw reports, profiler operator statistics, component spans and an audit are
-committed in [benchmarks/t4_20261013](benchmarks/t4_20261013). The recorded source
-is commit `90b883a`. The optional mask-caching optimization added afterward has
-its own notebook evaluation; its performance is not included in this table.
+[Final raw reports, audits and profile evidence](benchmarks/t4_20261013_final)
+record source `1bed58a`. The [initial ten-utterance result](benchmarks/t4_20261013)
+is retained separately. The datasets and conditions differ, so their latency
+numbers are not a controlled mask-caching ablation.
 
 ## Quick start
 
@@ -59,7 +59,7 @@ First run a two-clip smoke check:
 specvoice-compare --audio audio1.wav audio2.wav --max-samples 2   --repetitions 1 --warmup-runs 1 --output results/gpu_smoke.json
 ```
 
-Reproduce the recorded workload and audit the result:
+Reproduce the final workload and audit the result:
 
 ```bash
 specvoice-compare --max-samples 10 --repetitions 3 --warmup-runs 1   --max-new-tokens 128 --profile --output results/comparison.json
@@ -102,22 +102,26 @@ acceptance/EOS packet is transferred per verification block. Transformers still
 manages dynamic KV allocations. Implementation: Python, PyTorch SDPA/CUDA,
 PyTorch Profiler and NVTX.
 
-## Profile-guided follow-up
+## Profiling result
 
-The uploaded T4 trace exposed repeated `arange`/`isin`/`unique` work in token
-suppression. `--cached-suppression` builds boolean masks once, preserving the
-shared target policy. FP16/FP32 score-equivalence tests and a pretrained CPU
-oracle check pass. The GPU notebook includes this separate wider evaluation:
+On the same 23-generated-token clip, the final traces show `aten::isin` and
+`aten::_unique` calls each falling from 90 to zero after mask caching. Both
+profiles have identical output tokens, five target calls and 20 draft calls.
+Recorded `cudaLaunchKernel` runtime calls fall from 8,427 to 6,578 (21.9%);
+`cuLaunchKernel` driver calls remain at 1,354. Instrumented timing is excluded
+from the headline request benchmark.
+
+Cached masks are enabled for buffered paths by default. Use
+`--no-cached-suppression` for the original four-path ablation:
 
 ```bash
-specvoice-compare --modes baseline optimized --max-samples 30   --sample-strategy evenly-spaced --repetitions 3 --max-new-tokens 256   --cached-suppression --verify-generate --profile --output results/expanded.json
-specvoice-audit results/expanded.json --output results/expanded.audit.json
+specvoice-compare --modes baseline speculative optimized adaptive \
+  --max-samples 10 --repetitions 3 --max-new-tokens 128 \
+  --no-cached-suppression --output results/uncached.json
 ```
 
-Selected clips above 30 seconds are recorded and skipped. Report the actual
-completed sample count. If any output is truncated, use a larger permitted token
-budget before reporting WER. The target greedy oracle continues using the
-original Hugging Face suppression processors.
+The target-only oracle continues using the original Hugging Face suppression
+processors. Timestamp rules retain the original adapter.
 
 ## Measurement and validation
 

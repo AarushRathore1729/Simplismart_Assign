@@ -11,12 +11,12 @@ Suggested explanation:
 
 “Tiny proposes several tokens, and Large-v3 checks the block in one pass. A
 mismatch commits the target correction and rolls back speculative cache state.
-In my T4 test, fixed drafting cut median request latency from 833 to 488 ms.
+In my T4 test, fixed drafting cut median request latency from 820 to 512 ms.
 Adaptive drafting was slower, so fixed k=4 is the default. I kept both paths
 and the profiler output to explain the tradeoff.”
 
-For the uploaded clip, use the latency shown by that actual run. The 833/488 ms
-numbers belong to the recorded ten-utterance benchmark, not every possible clip.
+For the uploaded clip, use the latency shown by that actual run. The 820/512 ms
+numbers belong to the recorded 30-utterance benchmark, not every possible clip.
 
 ## REST upload
 

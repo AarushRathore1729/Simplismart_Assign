@@ -1,0 +1,70 @@
+{
+  "text": "Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel.",
+  "token_ids": [
+    50258,
+    50259,
+    50360,
+    50364,
+    2221,
+    13,
+    2326,
+    388,
+    391,
+    307,
+    264,
+    50244,
+    295,
+    264,
+    2808,
+    5359,
+    11,
+    293,
+    321,
+    366,
+    5404,
+    281,
+    2928,
+    702,
+    14943,
+    13,
+    50257
+  ],
+  "mode": "optimized",
+  "target_encoder_seconds": 0.14974421600004462,
+  "draft_encoder_seconds": 0.008669891999943502,
+  "decoder_seconds": 0.556384808999951,
+  "total_seconds": 0.7147989169999391,
+  "decode_stats": {
+    "generated_tokens": 23,
+    "draft_tokens": 20,
+    "accepted_draft_tokens": 18,
+    "draft_calls": 20,
+    "target_calls": 5,
+    "elapsed_seconds": 0.5559621170000355,
+    "verification_blocks": 5,
+    "fallback_tokens": 0,
+    "draft_lengths": [
+      4,
+      4,
+      4,
+      4,
+      4
+    ],
+    "control_transfers": 5,
+    "stage_cpu_seconds": {
+      "draft": 0.1768352789998744,
+      "verify": 0.36950126900001123,
+      "control": 0.0071511640001062915,
+      "cache_crop": 0.0017069780000156243
+    },
+    "stage_cuda_seconds": {
+      "draft": 0.176602237701416,
+      "verify": 0.36928886413574213,
+      "control": 0.006937952041625978,
+      "cache_crop": 0.001474719986319542
+    }
+  },
+  "generate_verified": false,
+  "preprocessing_seconds": 0.06094197200002327,
+  "request_seconds": 0.7768055709999544
+}

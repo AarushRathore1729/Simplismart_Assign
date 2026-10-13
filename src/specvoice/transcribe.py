@@ -25,7 +25,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-new-tokens", type=int, default=128)
     parser.add_argument("--max-draft-k", type=int, default=8)
     parser.add_argument("--profile-stages", action="store_true")
-    parser.add_argument("--cached-suppression", action="store_true")
+    parser.add_argument("--cached-suppression", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--device", default=None, help="For example: cuda, cuda:0 or cpu")
     parser.add_argument(
         "--dtype", choices=("auto", "float32", "float16", "bfloat16"), default="auto"

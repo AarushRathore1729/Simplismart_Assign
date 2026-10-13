@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "samples": 30,
+  "repetitions": 3,
+  "modes": [
+    "baseline",
+    "optimized"
+  ],
+  "summary_recomputed": true,
+  "token_digest_checks": 90,
+  "exact_match_evidence": "per-run digests",
+  "source_commit": "1bed58a422c42bb83751dfdcdd7aeb2985a171a8",
+  "report_sha256": "aa973028ee0803d7c2446712eaf6af87a58e0e74a67dcb8cf09f3478f3b987fc"
+}
