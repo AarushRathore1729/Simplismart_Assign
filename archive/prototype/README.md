@@ -1,46 +1,12 @@
-# SpecVoice — foundation in progress
+# Archived sampling prototype
 
-The repository is being evolved from the original Fast Whisper assignment into
-a low-latency streaming voice agent with correctness-tested speculative ASR.
-The old `fast_whisper/` package and published assignment results remain intact
-for provenance. New development lives under `src/specvoice/`.
+This folder preserves the earlier sampling implementation and its recorded outputs.
+For the maintained, correctness-checked greedy decoder, use the [main project](../../README.md).
 
-See [SPECVOICE_FOUNDATION.md](SPECVOICE_FOUNDATION.md) for the new implementation,
-correctness boundary, benchmark command and milestone sequence.
+The prototype timing and WER figures below use different methodology and are not
+the validated results of the current decoder. Current evidence is in
+[`benchmarks/t4_20261013_final`](../../benchmarks/t4_20261013_final).
 
-## Current SpecVoice CLI
-
-Install the new package and transcribe a short audio file with the shared
-Whisper token policy:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e '.[dev,benchmark]'
-
-specvoice-transcribe audio1.wav \
-  --target-model openai/whisper-large-v3 \
-  --draft-model openai/whisper-tiny \
-  --draft-k 4 \
-  --verify-generate
-```
-
-`--verify-generate` makes the command fail unless the generated token suffix is
-exactly equal to Hugging Face's greedy `generate()` result. The current CLI is
-for short-form audio (up to 30 seconds); streaming segmentation is the next
-milestone.
-
-Large-v3 and Tiny do not use identical vocabulary IDs. SpecVoice constructs a
-token-string-based mapping between them and applies each checkpoint's Whisper
-policy in its native ID space before comparing proposals in the target space.
-
-> The historical 1.76x result below is an assignment-era result and has not yet
-> been reproduced with synchronized timing, exact-token checks, warm-up and a
-> sufficiently large evaluation set. It is not treated as the final project result.
-
----
-
-# Historical prototype: Fast Whisper Speculative Decoding
 
 This project implements speculative decoding for OpenAI's Whisper models to accelerate inference. It uses a small draft model (Whisper Tiny) to propose tokens and a large target model (Whisper Large V3) to verify them.
 
@@ -62,7 +28,7 @@ This project implements speculative decoding for OpenAI's Whisper models to acce
 ```bash
 # Clone the repository
 git clone https://github.com/AarushRathore1729/Simplismart_Assign.git
-cd Simplismart_Assign
+cd Simplismart_Assign/archive/prototype
 
 # Create virtual environment
 python -m venv .venv
@@ -92,7 +58,7 @@ python run.py --dataset librispeech_asr --split validation_clean --max-samples 1
 
 ### 2. Python API (Demo)
 
-I have provided a `demo.py` script that demonstrates how to use the `SpeculativeWhisper` class , matching the assignment requirements.
+The `demo.py` script demonstrates the earlier `SpeculativeWhisper` interface.
 
 ```bash
 python demo.py

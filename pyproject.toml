@@ -18,6 +18,11 @@ dependencies = [
   "accelerate>=0.33,<2",
 ]
 
+[project.urls]
+Homepage = "https://fast-whisper-aarush.socialhill32.chatgpt.site"
+Repository = "https://github.com/AarushRathore1729/Simplismart_Assign"
+Documentation = "https://github.com/AarushRathore1729/Simplismart_Assign/tree/main/docs"
+
 [project.optional-dependencies]
 benchmark = [
   "datasets>=2.18",
