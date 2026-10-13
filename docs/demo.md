@@ -6,7 +6,7 @@ For live audio inference, run notebook Section 3 on a GPU with `SHARE = True`,
 or launch `specvoice-demo --share` to create a temporary Gradio link.
 
 1. Launch `specvoice-demo` on the GPU used for the benchmark.
-2. Upload `audio1.wav` or a short English clip. Click **Transcribe and compare**.
+2. Upload `samples/audio1.wav` or a short English clip. Click **Transcribe and compare**.
 3. Show the target-only and buffered fixed-draft transcripts and exact agreement.
 4. Point out the measured request and decoder times for all four paths.
 5. Open the raw measurements and show draft calls, target calls, draft lengths
@@ -28,7 +28,7 @@ numbers belong to the recorded 30-utterance benchmark, not every possible clip.
 ```bash
 specvoice-serve --port 8000
 curl -X POST 'http://127.0.0.1:8000/transcribe?mode=optimized&max_new_tokens=128' \
-  -F 'file=@audio1.wav'
+  -F 'file=@samples/audio1.wav'
 ```
 
 `GET /health` reports readiness. `/docs` exposes the request schema. The response

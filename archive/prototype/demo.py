@@ -7,7 +7,7 @@ from fast_whisper.transcriber import FastWhisperTranscriber as SpeculativeWhispe
 sw = SpeculativeWhisper(draft_model="tiny", target_model="large-v3", device="cpu") 
 # Using CPU for local demo, change to "cuda" if you have a GPU
 
-sample_root = Path(__file__).resolve().parents[2]
+sample_root = Path(__file__).resolve().parents[2] / "samples"
 audio_files = [str(sample_root / name) for name in ("audio1.wav", "audio2.wav")]
 
 print("Transcribing...")
