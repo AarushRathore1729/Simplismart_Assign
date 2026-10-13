@@ -164,6 +164,6 @@ Scope: greedy English transcription, batch size one, audio up to 30 seconds.
 - `scripts/render_benchmark.py`: reproducible SVG/PNG benchmark figure.
 - `tests/`: offline correctness, API and benchmark validation.
 
-The original assignment remains under `fast_whisper/`; its [historical README](docs/legacy_assignment.md)
-and sampling results are a separate implementation. Use the `specvoice-*` commands
-for the verified greedy inference project.
+Earlier sampling experiments and outputs are retained in
+[`archive/prototype/`](archive/prototype). Use the `specvoice-*` commands for
+the maintained decoder and the benchmark figures reported above.

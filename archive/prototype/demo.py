@@ -1,3 +1,4 @@
+from pathlib import Path
 from fast_whisper.transcriber import FastWhisperTranscriber as SpeculativeWhisper
 
 # Initialize the model 
@@ -6,7 +7,8 @@ from fast_whisper.transcriber import FastWhisperTranscriber as SpeculativeWhispe
 sw = SpeculativeWhisper(draft_model="tiny", target_model="large-v3", device="cpu") 
 # Using CPU for local demo, change to "cuda" if you have a GPU
 
-audio_files = ["audio1.wav", "audio2.wav"]
+sample_root = Path(__file__).resolve().parents[2]
+audio_files = [str(sample_root / name) for name in ("audio1.wav", "audio2.wav")]
 
 print("Transcribing...")
 # The transcribe method accepts a list and returns a list of texts
