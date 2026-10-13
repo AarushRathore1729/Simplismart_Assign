@@ -64,9 +64,11 @@ boolean masks once, then applies `masked_fill`. The target-only oracle keeps
 the original Hugging Face processors. Exact score-equivalence tests cover first
 and later positions in FP32 and FP16.
 
-This optimization is opt-in. Timestamp constraints retain the original adapter.
-The initial recorded GPU numbers predate mask caching; the notebook includes a
-separate wider evaluation for the new option.
+Cached masks are now the default for buffered paths after the final T4 run
+passed the 30-utterance Hugging Face oracle and all 90 token-digest comparisons.
+The same profiled 23-token clip eliminates all 90 isin and unique calls without
+changing tokens or model-forward counts. Timestamp constraints retain the original
+adapter. Use --no-cached-suppression for an uncached ablation.
 
 ## Measurement boundaries
 

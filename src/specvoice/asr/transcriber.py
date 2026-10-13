@@ -123,7 +123,7 @@ class SpeculativeWhisperTranscriber:
         dtype: torch.dtype | None = None,
         max_draft_k: int = 8,
         profile_stages: bool = False,
-        cached_suppression: bool = False,
+        cached_suppression: bool = True,
     ) -> None:
         self.target_model = target_model
         self.draft_model = draft_model
@@ -225,7 +225,7 @@ class SpeculativeWhisperTranscriber:
         max_draft_k: int = 8,
         profile_stages: bool = False,
         attn_implementation: str = "sdpa",
-        cached_suppression: bool = False,
+        cached_suppression: bool = True,
     ) -> SpeculativeWhisperTranscriber:
         """Load a compatible target/draft pair from Hugging Face."""
 

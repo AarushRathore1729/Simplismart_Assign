@@ -29,7 +29,7 @@ def create_app(engine=None):
         )
         yield
 
-    application = FastAPI(title="Fast Whisper", version="0.3.0", lifespan=lifespan)
+    application = FastAPI(title="Fast Whisper", version="0.3.1", lifespan=lifespan)
 
     @application.get("/health")
     def health():

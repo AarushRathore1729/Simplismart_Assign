@@ -1,0 +1,27 @@
+{
+  "source_commit": "1bed58a422c42bb83751dfdcdd7aeb2985a171a8",
+  "generated_tokens": 23,
+  "target_calls": 5,
+  "draft_calls": 20,
+  "tokens_identical": true,
+  "trace_counts": {
+    "comparison.trace.json": {
+      "aten::isin": 90,
+      "aten::_unique": 90,
+      "aten::masked_fill": 0,
+      "aten::masked_fill_": 0,
+      "cudaLaunchKernel": 8427,
+      "cuLaunchKernel": 1354
+    },
+    "expanded.trace.json": {
+      "aten::isin": 0,
+      "aten::_unique": 0,
+      "aten::masked_fill": 45,
+      "aten::masked_fill_": 45,
+      "cudaLaunchKernel": 6578,
+      "cuLaunchKernel": 1354
+    }
+  },
+  "cuda_launch_api_reduction_pct": 21.941378901151065,
+  "measurement_scope": "same 23-generated-token clip, separate instrumented runs; request timing headline is from unprofiled 30-utterance evaluation"
+}
