@@ -20,8 +20,8 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://fast-whisper-aarush.socialhill32.chatgpt.site"
-Repository = "https://github.com/AarushRathore1729/Simplismart_Assign"
-Documentation = "https://github.com/AarushRathore1729/Simplismart_Assign/tree/main/docs"
+Repository = "https://github.com/AarushRathore1729/fast-whisper"
+Documentation = "https://github.com/AarushRathore1729/fast-whisper/tree/main/docs"
 
 [project.optional-dependencies]
 benchmark = [

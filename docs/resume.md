@@ -10,7 +10,7 @@
   reproducible GPU benchmarks, a Gradio demo and FastAPI inference endpoint.
 
 [Website](https://fast-whisper-aarush.socialhill32.chatgpt.site)
-· [GitHub](https://github.com/AarushRathore1729/Simplismart_Assign)
+· [GitHub](https://github.com/AarushRathore1729/fast-whisper)
 
 The 30-utterance evaluation passed the Hugging Face generate() oracle and all
 90 per-run optimized/target digest comparisons; normalized WER was unchanged
