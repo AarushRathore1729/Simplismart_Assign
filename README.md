@@ -63,7 +63,7 @@ python -m pytest
 First run a two-clip smoke check:
 
 ```bash
-specvoice-compare --audio audio1.wav audio2.wav --max-samples 2   --repetitions 1 --warmup-runs 1 --output results/gpu_smoke.json
+specvoice-compare --audio samples/audio1.wav samples/audio2.wav --max-samples 2   --repetitions 1 --warmup-runs 1 --output results/gpu_smoke.json
 ```
 
 Reproduce the final workload and audit the result:
@@ -93,7 +93,7 @@ The REST API loads one engine and provides `POST /transcribe`, `GET /health`
 and `/docs`, with JSON text, tokens and component timings.
 
 ```bash
-curl -X POST 'http://127.0.0.1:8000/transcribe?mode=optimized&max_new_tokens=128'   -F 'file=@audio1.wav'
+curl -X POST 'http://127.0.0.1:8000/transcribe?mode=optimized&max_new_tokens=128'   -F 'file=@samples/audio1.wav'
 ```
 
 ## Implementations
@@ -163,6 +163,7 @@ Scope: greedy English transcription, batch size one, audio up to 30 seconds.
 - `benchmarks/`: committed measured evidence with source and hardware provenance.
 - `scripts/render_benchmark.py`: reproducible SVG/PNG benchmark figure.
 - `tests/`: offline correctness, API and benchmark validation.
+- `samples/`: bundled audio for smoke checks and manual demonstrations.
 
 Earlier sampling experiments and outputs are retained in
 [`archive/prototype/`](archive/prototype). Use the `specvoice-*` commands for
