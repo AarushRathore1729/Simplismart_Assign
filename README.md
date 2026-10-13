@@ -10,6 +10,13 @@ The final evaluation covers 30 test utterances and three repeats, with an
 additional untimed Hugging Face `generate()` oracle check. Buffered fixed k=4
 with cached suppression masks is the default.
 
+[Live benchmark showcase](https://fast-whisper-aarush.socialhill32.chatgpt.site)
+· [Run audio inference in Colab](https://colab.research.google.com/github/AarushRathore1729/Simplismart_Assign/blob/main/notebooks/gpu_upgrade.ipynb)
+
+The public showcase includes all 30 clip-level results, transcript comparisons,
+raw report downloads and an illustrative draft–verify walkthrough. Live audio
+inference runs in the GPU-backed Gradio notebook. [Website source](website).
+
 ![Final recorded T4 benchmark](docs/assets/t4_latency.svg)
 
 ## Final benchmark
@@ -47,7 +54,7 @@ runtime's installed CUDA PyTorch and pins the tested Transformers release.
 · [Notebook source](notebooks/gpu_upgrade.ipynb) · [Decoder design](docs/design.md)
 
 ```bash
-git clone --branch feat/whisper-adaptive-profile --single-branch   https://github.com/AarushRathore1729/Simplismart_Assign.git
+git clone --branch main --single-branch https://github.com/AarushRathore1729/Simplismart_Assign.git
 cd Simplismart_Assign
 python -m pip install -e '.[dev,benchmark,demo,api]' 'transformers==4.57.1'
 python -m pytest
@@ -62,8 +69,11 @@ specvoice-compare --audio audio1.wav audio2.wav --max-samples 2   --repetitions 
 Reproduce the final workload and audit the result:
 
 ```bash
-specvoice-compare --max-samples 10 --repetitions 3 --warmup-runs 1   --max-new-tokens 128 --profile --output results/comparison.json
-specvoice-audit results/comparison.json --output results/comparison.audit.json
+specvoice-compare --max-samples 30 --sample-strategy evenly-spaced \
+  --repetitions 3 --warmup-runs 1 --max-new-tokens 256 \
+  --modes baseline optimized --cached-suppression --verify-generate \
+  --output results/expanded.json
+specvoice-audit results/expanded.json --output results/expanded.audit.json
 ```
 
 ## Demo and REST API

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta property="og:title" content="Fast Whisper | GPU Inference Optimization">
+  <meta property="og:description" content="Explore verified T4 benchmarks: 1.60× request speedup, 2.00× decoder speedup, exact target tokens.">
+  <meta property="og:url" content="https://fast-whisper-aarush.socialhill32.chatgpt.site">
+  <link rel="canonical" href="https://fast-whisper-aarush.socialhill32.chatgpt.site">
+  <meta name="theme-color" content="#102538">
+  <title>Fast Whisper | Aarush Rathore</title>
+  <meta name="description" content="Whisper-Large-v3 accelerated with Whisper-Tiny draft–verify decoding. Explore measured NVIDIA T4 benchmarks, exact token checks, and a reproducible GPU demo.">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#results">Skip to benchmarks</a>
+  <header class="nav wrap">
+    <a class="brand" href="#"><span class="brand-icon" aria-hidden="true">▥</span> FAST WHISPER</a>
+    <nav aria-label="Main navigation"><a href="#results">Results</a><a href="#decoding">How it works</a><a class="nav-git" href="https://github.com/AarushRathore1729/Simplismart_Assign" target="_blank" rel="noopener">GitHub ↗</a></nav>
+  </header>
+  <main>
+    <section class="hero wrap">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="status-dot"></span> GPU INFERENCE OPTIMIZATION · BY AARUSH RATHORE</p>
+        <h1>Let Tiny draft.<br>Let Large <em>verify.</em></h1>
+        <p class="intro">Accelerating Whisper-Large-v3 with speculative greedy decoding. Fewer target-model calls, with the same verified output tokens.</p>
+        <div class="actions"><a class="button primary" href="#results">Explore the benchmarks <span>↓</span></a><a class="button secondary" href="https://colab.research.google.com/github/AarushRathore1729/Simplismart_Assign/blob/main/notebooks/gpu_upgrade.ipynb" target="_blank" rel="noopener">Run the GPU demo ↗</a></div>
+        <p class="hero-note">Recorded on NVIDIA T4 · FP16 · fixed draft length k = 4</p>
+      </div>
+      <div class="hero-chart" aria-label="Median request latency comparison">
+        <div class="chart-title"><span class="mono">01 / MEASURED PERFORMANCE</span><span class="chip">T4 · FP16</span></div>
+        <p class="chart-heading">Same tokens.<br><span>37.6% less time.</span></p>
+        <div class="hero-bar-row"><div><span class="legend-dot baseline"></span> Target-only <strong>820 <small>ms</small></strong></div><div class="track"><div class="fill baseline" style="width:100%"></div></div></div>
+        <div class="hero-bar-row"><div><span class="legend-dot optimized"></span> Draft + verify <strong>512 <small>ms</small></strong></div><div class="track"><div class="fill optimized" style="width:62.42%"></div></div></div>
+        <div class="chart-foot"><span>p50 request latency</span><b>1.60× speedup</b></div>
+        <div class="chart-check"><span aria-hidden="true">✓</span> Exact target-token agreement in all 90 comparisons</div>
+      </div>
+    </section>
+    <div class="stats-band"><div class="wrap stats"><div><strong>2.00<span>×</span></strong><p>p50 decoder speedup</p></div><div><strong>90<span>/90</span></strong><p>Exact token checks passed</p></div><div><strong>3.22<span>%</span></strong><p>Normalized WER, unchanged</p></div><div><strong>67.8<span>%</span></strong><p>Draft-token acceptance</p></div></div></div>
+
+    <section id="results" class="section wrap">
+      <div class="section-heading"><div><p class="eyebrow">02 / THE EVIDENCE</p><h2>Inspect the measured results.</h2><p>30 utterances. Three repetitions. One target model, two decoding paths.</p></div><a class="text-link" href="benchmark.json" download="fast-whisper-t4-benchmark.json">Download raw benchmark ↓</a></div>
+      <div class="results-layout">
+        <div class="aggregate panel">
+          <div class="panel-top"><h3>Latency comparison</h3><span class="mono">MILLISECONDS · LOWER IS BETTER</span></div>
+          <div class="tabs" role="group" aria-label="Latency metric"><button class="active" data-metric="p50_request_ms" aria-pressed="true">p50 request</button><button data-metric="p95_request_ms" aria-pressed="false">p95 request</button><button data-metric="p50_decoder_ms" aria-pressed="false">p50 decoder</button></div>
+          <div class="aggregate-bars"><div class="bar-row"><div class="bar-label">Target-only <strong id="metric-baseline">820 ms</strong></div><div class="track"><div class="fill baseline" id="aggregate-baseline"></div></div></div><div class="bar-row"><div class="bar-label">Buffered draft + verify <strong id="metric-optimized">512 ms</strong></div><div class="track"><div class="fill optimized" id="aggregate-optimized"></div></div></div></div>
+          <div class="result-strip"><span id="metric-speedup">1.60× speedup</span><b id="metric-reduction">37.6% less latency</b></div>
+          <p class="small" id="metric-note">Includes feature processing, encoders, decoding and text processing. Excludes model loading and file I/O.</p>
+        </div>
+        <div class="method panel"><p class="eyebrow">REPRODUCIBLE, SCOPED EVALUATION</p><dl><div><dt>Hardware</dt><dd>NVIDIA Tesla T4</dd></div><div><dt>Target / draft</dt><dd>Large-v3 / Tiny</dd></div><div><dt>Precision / attention</dt><dd>FP16 / SDPA</dd></div><div><dt>Selection</dt><dd>30 evenly spaced clips</dd></div><div><dt>Correctness</dt><dd>Token hashes + HF generate oracle</dd></div><div><dt>Truncated runs</dt><dd>0</dd></div></dl><p class="small">LibriSpeech dummy clean validation subset: one speaker, three chapters. Single-request measurements; both models remain resident.</p></div>
+      </div>
+      <div class="sample-panel panel">
+        <div class="panel-top"><div><h3>Explore an individual utterance</h3><p class="small">Recorded measurements, not live inference. Select a clip to inspect its transcript and repeated timings.</p></div><div class="selector"><label for="sample-select">Utterance</label><select id="sample-select"><option>Loading recorded data…</option></select></div></div>
+        <div id="sample-chart" aria-label="Request latency for all 30 utterances"></div>
+        <div class="sample-chart-legend"><span><i class="legend-dot baseline"></i> Target-only</span><span><i class="legend-dot optimized"></i> Draft + verify</span><span>Median of 3 runs per clip · click a pair to select</span></div>
+        <div class="sample-info"><span id="sample-duration">— seconds of audio</span><span id="sample-speedup">—</span><b class="agreement" id="sample-agreement">Exact token agreement</b></div>
+        <div class="transcripts"><div><p class="mono">TARGET-ONLY TRANSCRIPT</p><p id="transcript-baseline">Loading…</p></div><div><p class="mono">DRAFT + VERIFY TRANSCRIPT</p><p id="transcript-optimized">Loading…</p></div></div>
+        <div class="table-scroll"><table><caption>Individual repetitions for the selected utterance</caption><thead><tr><th>Run</th><th>Target-only request</th><th>Draft + verify request</th><th>Target calls, baseline → optimized</th><th>Token hash match</th></tr></thead><tbody id="sample-runs"></tbody></table></div>
+      </div>
+    </section>
+
+    <section id="decoding" class="mechanism section"><div class="wrap">
+      <div class="section-heading"><div><p class="eyebrow">03 / INSIDE THE DECODER</p><h2>Draft a block. Verify the prefix.</h2><p>Whisper-Tiny proposes several tokens; Large-v3 verifies them together.</p></div><span class="chip light">Illustrative walkthrough</span></div>
+      <div class="walk-layout">
+        <div class="walk-display"><div class="walk-top"><span id="step-count" class="mono">STEP 1 / 4</span><span class="walk-status" id="step-status">DRAFT</span></div><div class="token-row"><span class="token-label">Tiny proposes</span><div id="draft-tokens" class="tokens"></div></div><div class="token-row"><span class="token-label">Large verifies</span><div id="target-tokens" class="tokens"></div></div><div class="token-row committed-row"><span class="token-label">Committed output</span><div id="committed-tokens" class="tokens"></div></div><div class="walk-bottom"><span id="cache-note">Existing prefix is shared by both paths.</span><div class="walk-controls"><button id="walk-reset" aria-label="Restart walkthrough">↺ Reset</button><button id="walk-next">Next step →</button></div></div></div>
+        <div class="walk-explain" aria-live="polite"><h3 id="step-heading">Tiny drafts four tokens.</h3><p id="step-description"></p><ol class="step-list"><li class="current">Draft</li><li>Verify</li><li>Commit</li><li>Roll back</li></ol><p class="small">The words and cache state here are illustrative. Actual token equality is established by the benchmark above.</p></div>
+      </div>
+      <div class="engineering"><div><span class="mono">01</span><h3>Correctness first</h3><p>Commit only the matching greedy prefix and the target correction. Tokenizer mapping handles the Large-v3 / Tiny vocabulary difference.</p></div><div><span class="mono">02</span><h3>Persistent cache, bounded buffers</h3><p>Reuse encoder cross-attention state. Roll back self-attention KV state after a mismatch, with buffered tokens and device-side prefix decisions.</p></div><div><span class="mono">03</span><h3>Profile, then simplify</h3><p>Cached suppression masks remove repeated <code>isin</code> and <code>unique</code> work. Fixed k = 4 remains the default after comparison with adaptive drafting.</p></div></div>
+    </div></section>
+
+    <section class="section wrap profile-section"><div><p class="eyebrow">04 / ONE CLIP UNDER THE PROFILER</p><h2>Less repeated launch work.</h2><p>On the same 23-token clip, cached masks reduced CUDA runtime <code>cudaLaunchKernel</code> calls from 8,427 to 6,578, with identical output tokens.</p><p class="small">21.9% fewer runtime API calls in separate instrumented runs. Driver <code>cuLaunchKernel</code> calls stayed at 1,354. These traces are separate from the unprofiled latency benchmark.</p><a class="text-link" href="profile.json" download>Download profile counters ↓</a></div><div class="profile-counters"><div><strong>90 → 0</strong><span>Repeated <code>aten::isin</code> operations</span></div><div><strong>21.9%</strong><span>Fewer CUDA runtime launch calls</span></div></div></section>
+
+    <section id="demo" class="demo-section"><div class="wrap demo-layout"><div><p class="eyebrow">05 / RUN IT YOURSELF</p><h2>Your audio. Real GPU inference.</h2><p>The Gradio interface compares four decoding paths, shows transcripts and timings, and exports the measured result. FastAPI exposes an audio-upload endpoint.</p><p class="small">This showcase runs without a GPU. Live transcription runs in your Colab or Lightning GPU session. In notebook Section 3, set <code>SHARE = True</code> to launch a temporary public Gradio demo.</p></div><div class="demo-actions"><a class="button primary" href="https://colab.research.google.com/github/AarushRathore1729/Simplismart_Assign/blob/main/notebooks/gpu_upgrade.ipynb" target="_blank" rel="noopener">Open GPU demo in Colab ↗</a><a class="button secondary" href="https://github.com/AarushRathore1729/Simplismart_Assign/blob/main/docs/demo.md" target="_blank" rel="noopener">Read the demo guide ↗</a><div class="terminal"><span class="mono">LOCAL GPU</span><code>specvoice-demo --share</code><code>specvoice-serve --port 8000</code></div></div></div></section>
+  </main>
+  <footer class="wrap"><div><b>Fast Whisper</b><span>Built by Aarush Rathore · Python / PyTorch / CUDA profiling / FastAPI</span></div><a href="https://github.com/AarushRathore1729/Simplismart_Assign" target="_blank" rel="noopener">Source, tests & evidence ↗</a><p>Recorded evaluation: 13 October 2026 · source <code>1bed58a</code> · measurements preserved in the repository.</p></footer>
+  <div class="load-error" id="load-error" hidden>Recorded data could not be loaded. <a href="benchmark.json">Open the raw benchmark</a>.</div>
+</body>
+</html>

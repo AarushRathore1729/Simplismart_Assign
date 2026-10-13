@@ -1,5 +1,10 @@
 # One-minute demo
 
+Permanent résumé link: [Fast Whisper showcase](https://fast-whisper-aarush.socialhill32.chatgpt.site).
+It displays the recorded benchmark and an illustrative decoder walkthrough.
+For live audio inference, run notebook Section 3 on a GPU with `SHARE = True`,
+or launch `specvoice-demo --share` to create a temporary Gradio link.
+
 1. Launch `specvoice-demo` on the GPU used for the benchmark.
 2. Upload `audio1.wav` or a short English clip. Click **Transcribe and compare**.
 3. Show the target-only and buffered fixed-draft transcripts and exact agreement.
